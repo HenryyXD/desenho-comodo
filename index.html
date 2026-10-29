@@ -1,0 +1,1633 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desenho do cômodo — protótipo</title>
+<style>
+  :root {
+    --primary: #1f4d3a; --primary-soft: #e3eee8; --bg: #f5f4f0; --surface: #fff; --sheet: #f1f0eb;
+    --ink: #17201b; --muted: #6b726d; --line: #dcdcd5; --warn: #b3261e; --warn-soft: #fbe5e3;
+    --blue: #00658f; --door: #b8621b; --curve: #6b3fa0; --grid: #e6ecf2; --grid2: #d3dde7;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 28px 16px 60px; display: flex; gap: 40px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+  aside { flex: 1 1 340px; max-width: 520px; }
+  aside h1 { font-size: 26px; margin: 0 0 4px; }
+  aside h2 { font-size: 17px; margin: 22px 0 6px; }
+  aside p, aside li { color: #3a423d; }
+  aside ul { padding-left: 20px; margin: 6px 0; }
+  aside li { margin: 3px 0; }
+  .lead { color: var(--muted); }
+  .note { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+  label.chk { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 14px; cursor: pointer; }
+  code { background: #eceae3; border-radius: 4px; padding: 0 4px; font-size: 13px; }
+
+  /* phone */
+  .phone { flex: 0 0 auto; width: 392px; height: min(820px, calc(100vh - 32px)); min-height: 680px; border-radius: 46px; background: #111; padding: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.25); position: sticky; top: 16px; }
+  .screen { position: relative; width: 100%; height: 100%; border-radius: 36px; overflow: hidden; background: var(--surface); display: flex; flex-direction: column; user-select: none;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Ccircle cx='15' cy='15' r='12' fill='rgba(40,40,40,.18)' stroke='rgba(40,40,40,.45)' stroke-width='1.5'/%3E%3C/svg%3E") 15 15, pointer; }
+  .status { height: 30px; display: flex; justify-content: space-between; align-items: center; padding: 0 26px; font-size: 13px; font-weight: 600; }
+  .appbar { display: flex; align-items: center; gap: 10px; padding: 4px 14px 8px; }
+  .appbar .back { font-size: 22px; width: 40px; height: 40px; border: 0; background: transparent; border-radius: 20px; cursor: inherit; color: var(--ink); }
+  .appbar .done { padding: 8px 14px; }
+  .appbar h2 { margin: 0; font-size: 18px; flex: 1; }
+  .modeswrap { position: relative; margin: 0 10px 8px; }
+  .modes { display: flex; gap: 2px; background: var(--sheet); border-radius: 12px; padding: 3px; overflow-x: auto; scrollbar-width: none; touch-action: pan-x; }
+  .modes::-webkit-scrollbar { display: none; }
+  .modeswrap .more { position: absolute; top: 0; bottom: 0; width: 34px; border: 0; font-size: 15px; color: var(--primary); cursor: inherit; z-index: 2; }
+  .modeswrap .more.l { left: 0; border-radius: 12px 0 0 12px; background: linear-gradient(90deg, var(--sheet) 55%, rgba(241,240,235,0)); text-align: left; padding-left: 7px; }
+  .modeswrap .more.r { right: 0; border-radius: 0 12px 12px 0; background: linear-gradient(270deg, var(--sheet) 55%, rgba(241,240,235,0)); text-align: right; padding-right: 7px; }
+  .modeswrap .more[hidden] { display: none; }
+  .modes button { flex: 1 0 auto; border: 0; background: transparent; padding: 7px 8px; border-radius: 10px; font: 600 12.5px system-ui, sans-serif; color: var(--muted); cursor: inherit; white-space: nowrap; }
+  .modes button.on { background: var(--surface); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .canvas { position: relative; flex: 1; min-height: 0; background: #fbfcfd; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  #cv { width: 100%; height: 100%; display: block; touch-action: none; }
+  .legend { position: absolute; left: 100px; top: 18px; font-size: 11.5px; color: var(--muted); background: rgba(255,255,255,.85); padding: 1px 8px; border-radius: 8px; pointer-events: none; }
+  .fit { position: absolute; right: 10px; top: 10px; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 17px; cursor: inherit; }
+  /* aberturas: botões flutuantes com ícone, no mesmo estilo do enquadrar */
+  .fabs { position: absolute; right: 10px; top: 54px; display: flex; flex-direction: column; gap: 8px; }
+  .fab { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; padding: 0; cursor: inherit; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .fab svg { width: 22px; height: 22px; }
+  .fab.on { border-color: transparent; color: #fff; }
+  .fab.on[data-k=door] { background: var(--door); }
+  .fab.on[data-k=window] { background: var(--blue); }
+  .fab.on[data-k=passage] { background: #555; }
+  .fab.on[data-k=pillar] { background: #5f6b64; }
+  /* grade do "+ Mais" e o "Mais detalhes" das folhas */
+  .grp { margin: 10px 0 6px; font-size: 12.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .gitem { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 4px; font: 600 11.5px/1.2 system-ui, sans-serif; color: var(--ink); text-align: center; cursor: inherit; min-height: 72px; }
+  .gitem span { font-size: 22px; }
+  details.more { margin-top: 4px; border-top: 1px solid var(--sheet); }
+  details.more summary { padding: 10px 0; font-weight: 600; color: var(--primary); cursor: inherit; list-style: none; }
+  details.more summary::before { content: "▸ "; }
+  details.more[open] summary::before { content: "▾ "; }
+  .fablbl { position: absolute; right: 52px; background: var(--ink); color: #fff; font: 600 12px system-ui, sans-serif; padding: 3px 8px; border-radius: 8px; white-space: nowrap; pointer-events: none; }
+  .tip { position: absolute; left: 12px; right: 56px; top: 56px; z-index: 5; background: var(--ink); color: #fff; border-radius: 14px; padding: 10px 12px; font-size: 13.5px; line-height: 1.4; box-shadow: 0 6px 16px rgba(0,0,0,.2); }
+  .tip button { margin-top: 6px; background: #fff; color: var(--ink); border: 0; border-radius: 8px; padding: 4px 12px; font-weight: 600; cursor: inherit; }
+
+  /* controles do modo flutuando na parte de baixo do desenho: só os botões pegam o toque, o resto deixa passar */
+  .controls { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 12px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: none; }
+  .controls .chips, .controls .penrow, .controls .pencol, .controls .dpad { pointer-events: none; }
+  .controls button { pointer-events: auto; }
+  .controls .hint { background: rgba(255,255,255,.94); border-radius: 10px; padding: 6px 10px; max-width: 300px; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .controls .btn, .controls .chip, .controls .dpad button { box-shadow: 0 2px 6px rgba(0,0,0,.16); }
+  .controls .dpad button:not(.mid) { background: #fff; }
+  .controls .dpad button.press { background: var(--primary); }
+  .fabs.left { left: 10px; right: auto; top: 10px; flex-direction: row; }
+  .fab:disabled { opacity: .35; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 20px; padding: 6px 11px; font: 600 13px system-ui, sans-serif; color: var(--ink); display: inline-flex; align-items: center; gap: 5px; cursor: inherit; }
+  .chip .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .chip.on { border-color: transparent; color: #fff; }
+  .chip.on[data-k=door] { background: var(--door); }
+  .chip.on[data-k=window] { background: var(--blue); }
+  .chip.on[data-k=passage] { background: #555; }
+  .chip.on[data-k=curve] { background: var(--curve); }
+  .chip.on[data-k=incline] { background: var(--primary); }
+  .chip.on[data-k=incline] .sw { background: #fff !important; }
+  .hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+  .penrow { display: flex; align-items: center; gap: 14px; }
+  .dpad { display: grid; grid-template-columns: repeat(3, 54px); grid-template-rows: repeat(3, 50px); gap: 4px; }
+  .dpad button { border: 0; border-radius: 14px; background: var(--primary-soft); color: var(--primary); font-size: 22px; cursor: inherit; touch-action: none; }
+  .dpad button:active, .dpad button.press { background: var(--primary); color: #fff; }
+  .dpad .mid { background: var(--sheet); color: var(--ink); font: 600 12px system-ui, sans-serif; line-height: 1.15; }
+  .pencol { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .btn { border: 0; border-radius: 12px; padding: 10px 12px; font: 600 14px system-ui, sans-serif; cursor: inherit; }
+  .btn.pri { background: var(--primary); color: #fff; }
+  .btn.sec { background: var(--primary-soft); color: var(--primary); }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn.danger { background: var(--warn-soft); color: var(--warn); }
+  .btn:disabled { opacity: .35; }
+  .bottom { display: flex; gap: 8px; padding: 8px 12px 14px; align-items: center; border-top: 1px solid var(--line); }
+  .bottom .icon { width: 44px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 19px; cursor: inherit; }
+  .bottom .icon:disabled { opacity: .3; }
+  .bottom .grow { flex: 1; }
+
+  .toast { position: absolute; left: 50%; top: 172px; transform: translateX(-50%) translateY(10px); background: var(--ink); color: #fff; padding: 8px 14px; border-radius: 12px; font-size: 13.5px; opacity: 0; transition: .2s; pointer-events: none; width: max-content; max-width: 330px; text-align: center; z-index: 50; }
+  .toast.show { opacity: 1; transform: translateX(-50%); }
+  .ripple { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(31,77,58,.25); pointer-events: none; animation: rip .45s ease-out forwards; z-index: 60; }
+  @keyframes rip { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.32); display: flex; align-items: flex-end; z-index: 30; }
+  .sheet { background: var(--surface); width: 100%; border-radius: 22px 22px 0 0; padding: 16px 16px 18px; max-height: 88%; overflow: auto; }
+  .sheet h3 { margin: 0 0 10px; font-size: 18px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--sheet); }
+  .row > span { color: var(--muted); font-size: 14px; }
+  .val { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 6px 12px; font: 600 15px system-ui, sans-serif; cursor: inherit; }
+  .seg3 { display: flex; background: var(--sheet); border-radius: 10px; padding: 2px; }
+  .seg3 button { border: 0; background: transparent; padding: 6px 9px; border-radius: 8px; font: 600 12.5px system-ui, sans-serif; color: var(--muted); cursor: inherit; }
+  .seg3 button.on { background: var(--surface); color: var(--curve); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .oplist { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; }
+  .opitem { display: flex; align-items: center; gap: 8px; background: var(--sheet); border-radius: 10px; padding: 6px 10px; font-size: 14px; }
+  .opitem .grow { flex: 1; }
+  .opitem button { border: 0; background: transparent; font-size: 16px; cursor: inherit; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .actions .btn { flex: 1; }
+  .small { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
+
+  .kp-display { font: 600 34px system-ui, sans-serif; text-align: right; padding: 6px 10px; background: var(--sheet); border-radius: 12px; }
+  .kp-display small { font-size: 16px; color: var(--muted); margin-left: 6px; }
+  .kp { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .kp button { height: 52px; border: 0; border-radius: 12px; background: var(--sheet); font: 600 20px system-ui, sans-serif; cursor: inherit; }
+
+  .res-list { margin: 0; padding: 0; list-style: none; }
+  .res-list li { padding: 6px 0; border-bottom: 1px solid var(--sheet); font-size: 14px; }
+  .warn { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 8px 10px; font-size: 13.5px; margin: 8px 0; }
+  pre { background: #1b2420; color: #d9eadf; border-radius: 10px; padding: 10px; font-size: 11.5px; overflow: auto; max-height: 220px; }
+
+  /* svg */
+  .g1 { stroke: var(--grid); stroke-width: 1; }
+  .g2 { stroke: var(--grid2); stroke-width: 1; }
+  .wall { stroke: var(--ink); stroke-width: 6; fill: none; stroke-linecap: square; stroke-linejoin: miter; }
+  .wall.curved { stroke: var(--curve); }
+  .wall.sel { stroke: var(--primary); stroke-width: 9; }
+  .ghostwall { stroke: var(--muted); stroke-width: 2.5; stroke-dasharray: 7 6; fill: none; }
+  .gap { stroke: #fbfcfd; stroke-width: 9; stroke-linecap: butt; }
+  .lbl rect { fill: #fff; stroke: var(--line); }
+  .lbl text { font: 600 12px system-ui, sans-serif; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+  .num circle { fill: var(--primary-soft); }
+  .num text { font: 700 11px system-ui, sans-serif; fill: var(--primary); text-anchor: middle; dominant-baseline: central; }
+  .ink { stroke: rgba(0,101,143,.55); stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .inkghost { stroke: rgba(0,101,143,.3); stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .pulse { animation: pulse 1.1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes pulse { 50% { transform: scale(1.35); opacity: .5; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="phone">
+    <div class="screen" id="screen">
+      <div class="status"><span>9:41</span><span>▂▄▆ 🔋</span></div>
+      <div class="appbar"><button class="back" id="cancelBtn" title="Cancelar" aria-label="Cancelar">←</button><h2>Desenhar o cômodo</h2><button class="btn pri done" id="doneBtn">Concluir</button></div>
+      <div class="modeswrap">
+      <button class="more l" data-scroll="-1" hidden>‹</button><button class="more r" data-scroll="1">›</button>
+      <div class="modes">
+        <button data-mode="finger" class="on">✍️ Dedo</button>
+        <button data-mode="free">🧩 Livre</button>
+        <button data-mode="pen">🔵 Caneta</button>
+        <button data-mode="corners">📍 Cantos</button>
+        <button data-mode="walls">📏 Parede</button>
+        <button data-mode="measure">🔢 Medidas</button>
+      </div>
+      </div>
+      <div class="canvas" id="canvasBox">
+        <svg id="cv"><g id="scene"></g><polyline id="live" class="ink" points=""/></svg>
+        <div class="legend">medidas em m · quadrado = 50 cm</div>
+        <button class="fit" id="fitBtn" title="Enquadrar">⤢</button>
+        <div class="fabs" id="fabs">
+          <button class="fab" data-k="door" title="Porta" aria-label="Porta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18"/><path d="M5 21V4"/><path d="M5 4a17 17 0 0 1 15 17" stroke-dasharray="2.5 2.5" stroke-width="1.6"/></svg></button>
+          <button class="fab" data-k="window" title="Janela" aria-label="Janela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="16" rx="1.5"/><path d="M12 4v16M3.5 12h17"/></svg></button>
+          <button class="fab" data-k="passage" title="Vão" aria-label="Vão"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2 12h5M17 12h5"/><path d="M7 7v10M17 7v10"/><path d="M9.5 12h5" stroke-width="1.6" stroke-dasharray="1.5 2"/></svg></button>
+          <button class="fab" data-k="pillar" title="Mais itens: pilar, escada, tomada..." aria-label="Mais itens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div>
+        <div class="fabs left">
+          <button class="fab" id="undoBtn" title="Desfazer" aria-label="Desfazer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+          <button class="fab" id="redoBtn" title="Refazer" aria-label="Refazer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+        </div>
+        <!-- o que o modo precisa sempre flutua sobre o desenho; a folha de baixo só abre com algo selecionado -->
+        <div class="controls" id="controls"></div>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+      <div class="toast" id="toast"></div>
+    </div>
+  </div>
+
+  <aside>
+    <h1>Desenho do cômodo</h1>
+    <p class="lead">Protótipo para experimentar antes de implementar no app. O mouse faz o papel do dedo: clicar é tocar, arrastar é arrastar o dedo.</p>
+
+    <h2>✍️ Modo Dedo</h2>
+    <ul>
+      <li>Desenhe um <b>retângulo</b> num traço só e termine perto de onde começou. A sala fecha sozinha e os cantos viram 90°.</li>
+      <li>Desenhe um <b>L</b>, um <b>U</b> ou um T.</li>
+      <li>Faça uma parede com <b>barriga de propósito</b>. Ela vira parede curva (roxa).</li>
+      <li>Pare no meio e comece outro traço <b>a partir da ponta</b> do desenho para continuar.</li>
+      <li>Ligue <b>Porta</b>, <b>Janela</b> ou <b>Vão</b> nos botões flutuantes à direita do desenho e arraste sobre uma parede para marcar onde fica e quanto mede. Um toque só põe o tamanho padrão. Esses botões valem em todos os modos.</li>
+      <li><b>Toque numa medida</b> ou numa parede para digitar o comprimento certo, deixar a parede curva ou pôr aberturas. Com a sala fechada, a parede oposta se ajusta para fechar.</li>
+      <li><b>Gestos de abertura:</b> com as paredes desenhadas, risque em cima de uma parede. Um <b>arco</b> vira porta: o lado do arco diz se abre para dentro ou para fora, e a ponta alta diz onde fica a dobradiça. Um <b>zigue-zague</b> vira janela e um <b>risco reto</b> vira vão.</li>
+    </ul>
+
+    <h2>📍 Modo Cantos <span class="small">(como o modo de cantos do magicplan)</span></h2>
+    <ul>
+      <li><b>Toque</b> onde fica cada canto, dando a volta na sala. Antes de soltar, dá para arrastar para acertar o lugar. As paredes saem retas e em 90°.</li>
+      <li>Tocar no <b>primeiro canto</b> fecha a sala. Um canto perto da linha do começo se alinha sozinho.</li>
+      <li><b>Arraste uma bolinha</b> (canto) ou a <b>barrinha no meio</b> de uma parede para ajustar. As paredes vizinhas esticam ou encolhem e tudo continua em 90°.</li>
+      <li><b>Inclinar</b>: com ele ligado, arrastar um canto inclina as duas paredes ligadas a ele (perto de alinhar, gruda no esquadro), e o toque aceita qualquer ângulo. Tocar numa parede abre as medidas com o ângulo do canto, e nada muda até o OK.</li>
+    </ul>
+
+    <h2>Em todos os modos</h2>
+    <ul>
+      <li><b>Porta, janela e vão também em parede curva</b>: a abertura acompanha a curva. A posição é medida na reta entre as pontas da parede.</li>
+      <li><b>Pilar</b> (botão quadrado com X): toque onde ele fica. Perto de uma parede, ele encosta nela por dentro e gira junto, mesmo em parede inclinada ou curva. Arraste para mudar de lugar e toque para mudar o tamanho (padrão 30 × 30 cm) ou remover.</li>
+      <li><b>Centralizar como o GPS</b>: enquanto você não arrasta a vista, o desenho se enquadra sozinho a cada mudança, e o botão ⤢ fica escondido. Arrastando a vista, ela para onde você deixou e o ⤢ volta. Tocar nele volta a seguir.</li>
+    </ul>
+
+    <h2>📏 Modo Parede a parede <span class="small">(como o RoomSketcher)</span></h2>
+    <ul>
+      <li><b>Arraste</b> em qualquer lugar: a parede nasce na ponta do desenho e cresce na direção do arraste, com a medida aparecendo grande. Solte para fixar.</li>
+      <li>Perto da linha do começo, ela se alinha. Chegando ao começo, a sala fecha.</li>
+      <li>Ligue <b>Curva</b> antes de puxar para a parede sair curva.</li>
+    </ul>
+
+    <h2>🔢 Modo Medidas <span class="small">(direção + medida, como no AutoCAD)</span></h2>
+    <ul>
+      <li>Toque na <b>seta</b> para onde a parede vai e digite a medida da trena na calculadora. Isso se repete até voltar ao começo, ou você toca em <b>Fechar sala</b>.</li>
+      <li>É o jeito mais exato: nada de arrastar, só números.</li>
+    </ul>
+
+    <h2>🧩 Modo Livre <span class="small">(Cantos + Parede + Medidas, com parede inclinada)</span></h2>
+    <ul>
+      <li><b>Toque</b> no vazio para pôr o próximo canto, ou <b>arraste</b> para puxar a parede a partir da ponta, vendo a medida e o canto. Vale <b>qualquer ângulo</b>: perto de 45° e de 90° ela gruda.</li>
+      <li><b>Toque numa parede</b>: abre a folha com comprimento, canto com a parede anterior (90° = esquadro), reta ou curva com a flecha, e aberturas. Nada muda até o <b>OK</b>.</li>
+      <li><b>+ Parede pela medida</b>: comprimento, canto e para que lado vira, sem desenhar.</li>
+      <li>Arraste as <b>bolinhas</b> (cantos) ou a <b>barrinha</b> no meio da parede. A barrinha anda paralela e as pontas escorregam pelas paredes vizinhas.</li>
+      <li>Parede <b>redonda</b>: na folha da parede, escolha curva e a flecha. Com a flecha na metade da parede, ela vira meio círculo.</li>
+      <li>O <b>Concluir</b> avisa quando há canto fora do esquadro: o motor hoje só aceita 90°.</li>
+    </ul>
+
+    <h2>🔵 Modo Caneta guiada</h2>
+    <ul>
+      <li>Toque nas <b>setas</b>: cada toque anda um passo. <b>Segurar</b> anda sem parar e acelera. Trocar de seta faz o canto.</li>
+      <li>A seta contrária <b>volta</b> e apaga o caminho.</li>
+      <li>Ligue <b>Porta</b>, <b>Janela</b> ou <b>Vão</b> e ande: o trecho andado vira a abertura. O Vão é a "caneta levantada" e pode virar o canto. Porta e janela terminam no canto.</li>
+      <li><b>Curva</b>: alterna entre reta, curva para fora e curva para dentro. Vale para a parede em que você andar depois de ligar.</li>
+      <li>O tracejado mostra como a sala fecharia. <b>Fechar sala</b> completa com as paredes que faltam.</li>
+      <li>Arrastar no desenho move a vista.</li>
+    </ul>
+
+    <h2>➕ Itens do ambiente (todos os modos)</h2>
+    <ul>
+      <li>O botão <b>+</b> abaixo de Porta, Janela e Vão abre uma grade curta: <b>na planta</b> (pilar, escada, viga, cano na parede), <b>pontos na parede</b> (tomada, água, gás, ar-condicionado) e <b>o que já fica no lugar</b> (geladeira, máquina de lavar).</li>
+      <li>Escolha o item e toque no desenho. Ele entra com um <b>tamanho padrão</b>: perto de uma parede, encosta nela e gira junto. Os pontos ficam em cima da parede. Depois de colocar, o botão desliga.</li>
+      <li><b>Toque no item</b> para ver o básico (tamanho ou altura do chão). O resto fica em <b>Mais detalhes</b>, fechado: para que lado a escada sobe, a tensão da tomada, a altura da viga e outros. Quem abre uma vez encontra aberto da próxima.</li>
+      <li>Arraste o item para mudar de lugar.</li>
+    </ul>
+
+    <h2>Os dois modos usam o mesmo desenho</h2>
+    <p>Dá para começar no Dedo e terminar na Caneta, e o inverso. Desfazer e Refazer valem para tudo. <b>Concluir</b> mostra as paredes na ordem do motor (A, B, C…, sentido horário) e as operações que iriam para o <code>createRoom</code>.</p>
+
+    <div class="note">
+      <b>Como o traço vira paredes:</b> reamostra o traço em pontos a distâncias iguais, acha os cantos pelo "canudo" curto (<i>ShortStraw</i>) e pela mudança de direção, prende cada trecho no eixo mais próximo e junta os trechos seguidos no mesmo sentido. Se a barriga passa de 10% da parede, ela vira curva. As medidas vêm da grade e são arredondadas a 10 cm.
+      <label class="chk"><input type="checkbox" id="dbg"> Mostrar os pontos e cantos detectados no último traço</label>
+    </div>
+    <p class="small">Fica para decidir antes de levar para o app: o <code>createRoom</code> hoje só aceita retângulo e L. Formas livres pedem um <code>shape: "custom"</code> com a lista de paredes nos dois motores (Kotlin e TS) e golden novos.</p>
+  </aside>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+// direção de cada parede em graus, como na tela (y para baixo): 0 leste, 90 sul, 180 oeste, 270 norte; qualquer ângulo vale
+// a menos de 0,01° de um grau inteiro, vira o inteiro (resto de arredondamento de mm não entorta o esquadro)
+const normA = a => { a = ((a % 360) + 360) % 360; const r = Math.round(a); return Math.abs(a - r) < 0.01 ? r % 360 : a; };
+const D = a => { const r = a * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return [Math.abs(c) < 1e-12 ? 0 : c, Math.abs(s) < 1e-12 ? 0 : s]; };
+const opp = a => normA(a + 180);
+const isH = a => a % 180 === 0, isV = a => a % 180 === 90, isAxis = a => a % 90 === 0;
+const angOf = (dx, dy) => normA(Math.atan2(dy, dx) * 180 / Math.PI);
+const fmtAng = a => (Math.round(a * 10) / 10).toString().replace('.', ',') + '°';
+const KIND = { door: { name: 'Porta', w: 800, color: '#b8621b' }, window: { name: 'Janela', w: 1200, color: '#00658f' }, passage: { name: 'Vão', w: 900, color: '#555' } };
+const STEPS = [50, 100, 500];
+const MAX_SC = 0.045; // px por mm = 45 px por metro (escala para começar a desenhar)
+const FIT_MAX_SC = 0.16; // enquadrar pode aproximar até 160 px por metro (banheiro pequeno ainda cabe com folga)
+
+let draft = emptyDraft(), undoS = [], redoS = [];
+let mode = 'finger', fTool = null, pTool = null, pCurve = 0, pStep = 100, activeOp = null, opSeq = 1;
+let view = { sc: MAX_SC, tx: 80, ty: 90 }, W = 360, H = 400;
+let gesture = null, ghost = null, ghostTimer = null, dbg = null, showDebug = false, fdrag = null;
+let hits = { walls: [], labels: [] };
+const tipsSeen = new Set();
+
+function emptyDraft() { return { start: { x: 0, y: 0 }, segs: [], closed: false, anchored: false, pillars: [] }; }
+const PILLAR = 300; // pilar padrão de 30 × 30 cm
+let pillarSeq = 1, cornersFree = false, follow = true;
+function newSeg(dir, len) { return { dir, len, curve: 0, sag: null, ops: [] }; }
+const snap = () => JSON.stringify(draft);
+function pushUndo() { undoS.push(snap()); if (undoS.length > 300) undoS.shift(); redoS = []; }
+function undo() { if (!undoS.length) return; redoS.push(snap()); draft = JSON.parse(undoS.pop()); activeOp = null; render(); }
+function redo() { if (!redoS.length) return; undoS.push(snap()); draft = JSON.parse(redoS.pop()); activeOp = null; render(); }
+
+const fmtM = mm => (mm / 1000).toFixed(2).replace('.', ',');
+const fmtCm = mm => (Math.round(mm / 10)) + ' cm';
+const r50 = v => Math.round(v / 50) * 50;
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const toS = p => [p.x * view.sc + view.tx, p.y * view.sc + view.ty];
+const toW = (x, y) => ({ x: (x - view.tx) / view.sc, y: (y - view.ty) / view.sc });
+const P = a => a[0].toFixed(1) + ',' + a[1].toFixed(1);
+
+// ---------- geometria ----------
+function verts(d = draft) {
+  const v = [{ ...d.start }]; let p = d.start;
+  for (const s of d.segs) { const [dx, dy] = D(s.dir); p = { x: p.x + dx * s.len, y: p.y + dy * s.len }; v.push(p); }
+  return v;
+}
+function areaOf(d = draft) {
+  const v = verts(d); let a = 0;
+  for (let i = 0; i < v.length; i++) { const p = v[i], q = v[(i + 1) % v.length]; a += p.x * q.y - q.x * p.y; }
+  return a / 2;
+}
+// > 0: sentido horário na tela, interior à direita de quem anda (como o motor)
+const orientOf = (d = draft) => areaOf(d) < 0 ? -1 : 1;
+// normal que aponta para fora do cômodo
+function outN(dir, o) { const [dx, dy] = D(dir); return o > 0 ? [dy, -dx] : [-dy, dx]; }
+const autoSag = len => Math.max(50, r50(len * 0.15));
+function bulgeOf(s) { return s.curve ? s.curve * Math.min(s.sag ?? autoSag(s.len), Math.floor(s.len / 2)) : 0; }
+// ponto da parede i a `at` mm do começo (medido na reta entre as pontas), na tela, com a normal para fora ali.
+// Na curva (Bézier com controle sobre a mediatriz) a projeção na reta é linear no parâmetro, então t = at / comprimento.
+function wallAt(i, at, vs = verts(), o = orientOf()) {
+  const s = draft.segs[i], A = toS(vs[i]), B = toS(vs[i + 1]), n = outN(s.dir, o), bl = bulgeOf(s), t = Math.max(0, Math.min(1, at / s.len));
+  if (!bl) return { p: [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t], n };
+  const M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2], C = [M[0] + n[0] * 2 * bl * view.sc, M[1] + n[1] * 2 * bl * view.sc], u = 1 - t;
+  const p = [u * u * A[0] + 2 * u * t * C[0] + t * t * B[0], u * u * A[1] + 2 * u * t * C[1] + t * t * B[1]];
+  const tg = [2 * u * (C[0] - A[0]) + 2 * t * (B[0] - C[0]), 2 * u * (C[1] - A[1]) + 2 * t * (B[1] - C[1])], L = Math.hypot(tg[0], tg[1]) || 1;
+  return { p, n: o > 0 ? [tg[1] / L, -tg[0] / L] : [-tg[1] / L, tg[0] / L] };
+}
+// trecho da parede entre a e b (mm), em pontos (2 na reta, vários na curva)
+function wallRun(i, a, b, vs = verts(), o = orientOf()) {
+  const k = bulgeOf(draft.segs[i]) ? 10 : 1, out = [];
+  for (let j = 0; j <= k; j++) out.push(wallAt(i, a + (b - a) * j / k, vs, o));
+  return out;
+}
+
+function trimOps(s) {
+  s.ops = s.ops.filter(o => o.start < s.len - 1).map(o => ({ ...o, width: Math.min(o.width, s.len - o.start) })).filter(o => o.width >= 50);
+}
+function shiftOps(s, delta) {
+  s.ops = s.ops.map(o => { let st = o.start + delta, w = o.width; if (st < 0) { w += st; st = 0; } return { ...o, start: st, width: w }; }).filter(o => o.width >= 50);
+  trimOps(s);
+}
+function mergeAfter(a, b) {
+  for (const o of b.ops) a.ops.push({ ...o, start: o.start + a.len });
+  a.curve = a.curve && b.curve ? a.curve : 0; a.sag = null; a.len += b.len;
+}
+// junta trechos seguidos no mesmo sentido, desfaz idas e voltas, e na sala fechada trata a emenda do início
+function normalize(d) {
+  for (let guard = 0, changed = true; changed && guard < 500; guard++) {
+    changed = false;
+    d.segs = d.segs.filter(s => s.len > 0);
+    for (let i = 0; i + 1 < d.segs.length; i++) {
+      const a = d.segs[i], b = d.segs[i + 1];
+      if (a.dir === b.dir) { mergeAfter(a, b); d.segs.splice(i + 1, 1); changed = true; break; }
+      if (a.dir === opp(b.dir)) {
+        if (a.len >= b.len) { a.len -= b.len; trimOps(a); d.segs.splice(i + 1, 1); }
+        else { b.len -= a.len; shiftOps(b, -a.len); d.segs.splice(i, 1); }
+        changed = true; break;
+      }
+    }
+    if (!changed && d.closed && d.segs.length > 1) {
+      const f = d.segs[0], l = d.segs[d.segs.length - 1];
+      if (l.dir === f.dir) {
+        const L = l.len, [lx, ly] = D(l.dir); mergeAfter(l, f);
+        d.start = { x: d.start.x - lx * L, y: d.start.y - ly * L };
+        d.segs[0] = l; d.segs.pop(); changed = true;
+      } else if (l.dir === opp(f.dir)) {
+        const [fx, fy] = D(f.dir);
+        if (l.len >= f.len) {
+          d.start = { x: d.start.x + fx * f.len, y: d.start.y + fy * f.len };
+          l.len -= f.len; trimOps(l); d.segs.shift();
+        } else {
+          d.start = { x: d.start.x + fx * l.len, y: d.start.y + fy * l.len };
+          f.len -= l.len; shiftOps(f, -l.len); d.segs.pop();
+        }
+        changed = true;
+      }
+    }
+  }
+}
+// paredes que faltam para voltar ao início: no máximo uma horizontal e uma vertical
+function closingSegs(d = draft) {
+  const v = verts(d), e = v[v.length - 1], s = d.start, out = [];
+  const dx = s.x - e.x, dy = s.y - e.y, last = d.segs[d.segs.length - 1];
+  if (Math.hypot(dx, dy) < 1) return out;
+  // desenho com parede inclinada: fecha com uma parede reta direto até o começo
+  if (d.segs.some(x => !isAxis(x.dir))) return [{ dir: angOf(dx, dy), len: Math.round(Math.hypot(dx, dy)) }];
+  const h = Math.abs(dx) >= 1 ? { dir: dx > 0 ? 0 : 180, len: Math.abs(dx) } : null;
+  const vv = Math.abs(dy) >= 1 ? { dir: dy > 0 ? 90 : 270, len: Math.abs(dy) } : null;
+  if (last && isH(last.dir)) { if (h) out.push(h); if (vv) out.push(vv); } else { if (vv) out.push(vv); if (h) out.push(h); }
+  return out;
+}
+function closeDraft(silent) {
+  if (draft.closed) return true;
+  if (draft.segs.length < 2) { toast('Desenhe pelo menos duas paredes antes de fechar'); return false; }
+  const before = snap();
+  for (const c of closingSegs()) draft.segs.push(newSeg(c.dir, c.len));
+  draft.closed = true; normalize(draft);
+  if (draft.segs.length < (draft.segs.every(s => isAxis(s.dir)) ? 4 : 3) || Math.abs(areaOf()) < 250000) {
+    draft = JSON.parse(before); toast('Assim não fecha um cômodo: desenhe mais lados'); return false;
+  }
+  pTool = null; activeOp = null;
+  if (!silent) toast('Sala fechada');
+  return true;
+}
+
+// ---------- cantos, parede a parede e medidas ----------
+const snapW = w => ({ x: Math.round(w.x / 100) * 100, y: Math.round(w.y / 100) * 100 });
+const endW = () => { const v = verts(); return v[v.length - 1]; };
+// cantos sem repetir o primeiro (na sala fechada o último vértice é o começo)
+function uniq(d = draft) { const v = verts(d); return d.closed ? v.slice(0, -1) : v; }
+// remonta as paredes a partir dos cantos, guardando curva e aberturas de cada parede
+function rebuildFrom(U, base) {
+  const segs = base.segs.map((o, i) => {
+    const a = U[i], b = U[(i + 1) % U.length], dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+    const dir = len < 0.5 ? o.dir : angOf(dx, dy);
+    // aberturas ficam com a parede; só caem se ela virou do avesso
+    const flipped = Math.abs(normA(dir - o.dir) - 180) < 1;
+    const s = { ...o, dir, len: Math.round(len), ops: flipped ? [] : o.ops.map(x => ({ ...x })) };
+    trimOps(s); return s;
+  });
+  draft = { ...base, start: { ...U[0] }, segs };
+  normalize(draft);
+}
+// arrastar um canto: as duas paredes dele andam junto, e as vizinhas esticam (tudo continua em 90°)
+function dragVertex(base, k, w) {
+  const U = uniq(base).map(p => ({ ...p })), n = base.segs.length, m = U.length;
+  U[k] = { x: w.x, y: w.y };
+  const prev = k > 0 ? k - 1 : base.closed ? n - 1 : -1;
+  const keep = (j, dir) => { if (isH(dir)) U[j].y = U[k].y; else if (isV(dir)) U[j].x = U[k].x; };
+  if (prev >= 0) keep((k - 1 + m) % m, base.segs[prev].dir);
+  if (k < n) keep((k + 1) % m, base.segs[k].dir);
+  rebuildFrom(U, base);
+}
+// interseção das retas p + t·u e q + s·v (null se paralelas)
+function meet(p, u, q, v) {
+  const den = u[0] * v[1] - u[1] * v[0];
+  if (Math.abs(den) < 1e-9) return null;
+  const t = ((q.x - p.x) * v[1] - (q.y - p.y) * v[0]) / den;
+  return { x: p.x + u[0] * t, y: p.y + u[1] * t };
+}
+// arrastar uma parede: ela anda paralela a si mesma, e as pontas escorregam pelas paredes vizinhas
+function dragWall(base, k, w0, w) {
+  const U = uniq(base).map(p => ({ ...p })), m = U.length, n = base.segs.length, s = base.segs[k];
+  const [dx, dy] = D(s.dir), nrm = [-dy, dx];
+  const d = Math.round(((w.x - w0.x) * nrm[0] + (w.y - w0.y) * nrm[1]) / 50) * 50;
+  const ka = k, kb = (k + 1) % m, a = { x: U[ka].x + nrm[0] * d, y: U[ka].y + nrm[1] * d };
+  const prev = k > 0 ? k - 1 : base.closed ? n - 1 : -1, next = k + 1 < n ? k + 1 : base.closed ? 0 : -1;
+  const na = prev >= 0 ? meet(a, [dx, dy], U[prev], D(base.segs[prev].dir)) : null;
+  const nb = next >= 0 ? meet(a, [dx, dy], U[kb], D(base.segs[next].dir)) : null;
+  U[ka] = na || a;
+  U[kb] = nb || { x: U[kb].x + nrm[0] * d, y: U[kb].y + nrm[1] * d };
+  rebuildFrom(U, base);
+}
+// parede reta de `from` até perto de `w`, no eixo do maior deslocamento; perto da linha do começo, alinha com ele
+function axisFrom(from, w) {
+  const dx = w.x - from.x, dy = w.y - from.y, horiz = Math.abs(dx) >= Math.abs(dy);
+  const pt = horiz ? { x: w.x, y: from.y } : { x: from.x, y: w.y };
+  // ímã medido na tela (o dedo erra em pixels, não em milímetros)
+  const tol = Math.max(300, 24 / view.sc);
+  let aligned = false;
+  if (draft.segs.length >= 1) {
+    if (horiz && Math.abs(pt.x - draft.start.x) <= tol) { pt.x = draft.start.x; aligned = true; }
+    if (!horiz && Math.abs(pt.y - draft.start.y) <= tol) { pt.y = draft.start.y; aligned = true; }
+  }
+  const len = Math.abs(pt.x - from.x) + Math.abs(pt.y - from.y);
+  return { pt, len, aligned, dir: horiz ? (pt.x >= from.x ? 0 : 180) : (pt.y >= from.y ? 90 : 270) };
+}
+// modo Livre: qualquer ângulo; perto de múltiplos de 45° o ângulo gruda; perto do começo, fecha
+function freeFrom(from, w) {
+  const dx = w.x - from.x, dy = w.y - from.y;
+  let ang = angOf(dx, dy), len = Math.round(Math.hypot(dx, dy) / 100) * 100;
+  const s45 = Math.round(ang / 45) * 45;
+  ang = Math.abs(ang - s45) <= 6 ? normA(s45) : normA(Math.round(ang));
+  let [ux, uy] = D(ang), pt = { x: from.x + ux * len, y: from.y + uy * len }, aligned = false, closes = false;
+  const S = draft.start;
+  if (draft.segs.length >= 2 && dist(toS(pt), toS(S)) < 28) {
+    closes = true; pt = { ...S }; ang = angOf(S.x - from.x, S.y - from.y); len = Math.round(Math.hypot(S.x - from.x, S.y - from.y));
+  } else if (draft.segs.length >= 1 && isAxis(ang)) {
+    const tol = Math.max(300, 24 / view.sc);
+    if (isH(ang) && Math.abs(pt.x - S.x) <= tol) { pt.x = S.x; aligned = true; }
+    if (isV(ang) && Math.abs(pt.y - S.y) <= tol) { pt.y = S.y; aligned = true; }
+    len = Math.round(Math.hypot(pt.x - from.x, pt.y - from.y));
+  }
+  return { pt, len, dir: ang, aligned, closes };
+}
+function addWall(dir, len) {
+  if (draft.closed) { toast('A sala está fechada. Desfaça para continuar.'); return false; }
+  const last = draft.segs[draft.segs.length - 1];
+  if (last && last.dir === opp(dir)) { toast('Isso voltaria pela mesma parede'); return false; }
+  pushUndo();
+  const s = newSeg(dir, len); if (mode === 'walls' || mode === 'measure' || mode === 'free') s.curve = pCurve;
+  draft.segs.push(s); draft.anchored = true; normalize(draft);
+  const e = endW();
+  if (draft.segs.length >= 3 && Math.hypot(e.x - draft.start.x, e.y - draft.start.y) < 1 && closeDraft(true)) toast('Sala fechada');
+  ensureVisible();
+  return true;
+}
+function placeCorner(w) {
+  if (draft.closed) return;
+  w = snapW(w);
+  if (!draft.segs.length && !draft.anchored) { pushUndo(); draft.start = w; draft.anchored = true; toast('Primeiro canto. Toque onde fica o próximo.'); return; }
+  if (draft.segs.length >= 2 && dist(toS(w), toS(draft.start)) < 26) { pushUndo(); if (!closeDraft()) undoS.pop(); return; }
+  const a = mode === 'free' || (mode === 'corners' && cornersFree) ? freeFrom(endW(), w) : axisFrom(endW(), w);
+  if (a.len < 100) { toast('Toque mais longe do último canto'); return; }
+  addWall(a.dir, a.len);
+}
+// sem parede ainda, a primeira nasce onde o dedo encostou; depois, sempre na ponta do desenho
+function wallFromDrag(g) {
+  const from = !draft.segs.length && !draft.anchored ? snapW(toW(g.raw[0][0], g.raw[0][1])) : endW();
+  const v = [g.last[0] - g.raw[0][0], g.last[1] - g.raw[0][1]], w = { x: from.x + v[0] / view.sc, y: from.y + v[1] / view.sc };
+  return { ...(mode === 'free' ? freeFrom(from, w) : axisFrom(from, snapW(w))), from };
+}
+// ângulo do canto entre a parede que chega (dir a) e a que sai (dir b), de 0 a 180
+function cornerBetween(a, b) { const t = normA(opp(a) - b); return t > 180 ? 360 - t : t; }
+
+// ---------- gestos de abertura (modo Dedo) ----------
+// risco que fica em cima de uma parede: arco = porta, zigue-zague = janela, risco reto = vão
+function gestureOpening(raw) {
+  const vs = verts(), o = orientOf(), tol = Math.max(60, 1300 * view.sc);
+  let best = null;
+  // posição ao longo da parede (px, medida na reta entre as pontas) e afastamento da parede (px, + para fora), reta ou curva
+  const measure = (i, p) => {
+    const s = draft.segs[i], A = toS(vs[i]), [dx, dy] = D(s.dir);
+    const t = (p[0] - A[0]) * dx + (p[1] - A[1]) * dy, w = wallAt(i, t / view.sc, vs, o);
+    return [t, (p[0] - w.p[0]) * w.n[0] + (p[1] - w.p[1]) * w.n[1]];
+  };
+  draft.segs.forEach((s, i) => {
+    const Lpx = s.len * view.sc;
+    let near = 0, sum = 0;
+    for (const p of raw) {
+      const [t, q] = measure(i, p);
+      if (t > -15 && t < Lpx + 15 && Math.abs(q) < tol) near++;
+      sum += Math.abs(q);
+    }
+    if (near / raw.length >= 0.9 && (!best || sum < best.sum)) best = { i, sum };
+  });
+  if (!best) return false;
+  const { i } = best, s = draft.segs[i], tq = raw.map(p => measure(i, p));
+  const ts = tq.map(x => x[0]), offs = tq.map(x => x[1]);
+  const tmin = Math.max(0, Math.min(...ts)), tmax = Math.min(s.len * view.sc, Math.max(...ts)), spanPx = tmax - tmin;
+  // idas e voltas para os lados da parede (com folga de 4 px para o tremor do dedo)
+  let rev = 0, trend = 0, ext = offs[0];
+  for (const v of offs) {
+    if (trend === 0) { if (v - ext > 4) { trend = 1; ext = v; } else if (ext - v > 4) { trend = -1; ext = v; } }
+    else if (trend === 1) { if (v > ext) ext = v; else if (ext - v > 4) { rev++; trend = -1; ext = v; } }
+    else { if (v < ext) ext = v; else if (v - ext > 4) { rev++; trend = 1; ext = v; } }
+  }
+  let k = 0; offs.forEach((v, j) => { if (Math.abs(v) > Math.abs(offs[k])) k = j; });
+  const kind = rev >= 3 ? 'window' : Math.abs(offs[k]) > Math.max(10, 0.3 * spanPx) ? 'door' : 'passage';
+  let start = tmin / view.sc, width = spanPx / view.sc;
+  if (width < 300) { width = KIND[kind].w; start = Math.max(0, (tmin + tmax) / 2 / view.sc - width / 2); }
+  const extra = kind === 'door' ? { swing: offs[k] > 0 ? 'out' : 'in', hinge: Math.abs(ts[k] - tmin) <= Math.abs(ts[k] - tmax) ? 'start' : 'end' } : {};
+  ghost = raw.map(p => toW(p[0], p[1])); clearTimeout(ghostTimer); ghostTimer = setTimeout(() => { ghost = null; render(); }, 1400);
+  if (addOpening(i, kind, start, width, extra)) {
+    toast(KIND[kind].name + ' na parede ' + (i + 1) + (kind === 'door' ? ', abre para ' + (extra.swing === 'in' ? 'dentro' : 'fora') : ''));
+  }
+  return true;
+}
+
+// ---------- itens do ambiente (pilar, escada, viga, pontos...) ----------
+// Cada item nasce com um tamanho bom; o básico fica à vista e o resto em "Mais detalhes".
+// `point`: fica na linha da parede (tomada, água...); os outros são blocos que encostam na parede por dentro.
+const TYPES = {
+  pillar: { name: 'Pilar', icon: '⬛', w: 300, d: 300, group: 0, details: [{ key: 'shape', label: 'Formato', opts: [['square', 'Quadrado'], ['round', 'Redondo']] }] },
+  stair: { name: 'Escada', icon: '🪜', w: 2800, d: 800, group: 0, details: [{ key: 'up', label: 'Sobe para', opts: [['end', 'O fim'], ['start', 'O começo']] }, { key: 'rise', label: 'Altura até o andar de cima', num: 2800 }] },
+  beam: { name: 'Viga', icon: '▭', w: 3000, d: 200, group: 0, details: [{ key: 'bottom', label: 'Altura do chão até a viga', num: 2400 }] },
+  shaft: { name: 'Cano na parede', icon: '▥', w: 400, d: 300, group: 0, details: [{ key: 'height', label: 'Altura', num: 2600 }] },
+  outlet: { name: 'Tomada', icon: '🔌', point: true, h: 300, group: 1, details: [{ key: 'volt', label: 'Tensão', opts: [['127', '127 V'], ['220', '220 V']] }, { key: 'spots', label: 'Pontos', opts: [['1', '1'], ['2', '2'], ['3', '3']] }] },
+  water: { name: 'Ponto de água', icon: '💧', point: true, h: 600, group: 1, details: [{ key: 'water', label: 'Tipo', opts: [['cold', 'Água fria'], ['hot', 'Água quente'], ['drain', 'Esgoto']] }] },
+  gas: { name: 'Gás', icon: '🔥', point: true, h: 600, group: 1, details: [{ key: 'gas', label: 'Tipo', opts: [['pipe', 'Encanado'], ['bottle', 'Botijão']] }] },
+  ac: { name: 'Ar-condicionado', icon: '❄️', point: true, h: 2200, group: 1, details: [{ key: 'drain', label: 'Dreno', opts: [['yes', 'Tem'], ['no', 'Não tem']] }] },
+  fridge: { name: 'Geladeira', icon: '🧊', w: 700, d: 700, group: 2, details: [{ key: 'height', label: 'Altura', num: 1800 }] },
+  washer: { name: 'Máquina de lavar', icon: '🫧', w: 600, d: 650, group: 2, details: [{ key: 'height', label: 'Altura', num: 1000 }] },
+};
+const GROUPS = ['Na planta', 'Pontos na parede', 'Já ficam no lugar'];
+const POINT = 160; // tamanho de toque de um ponto na parede (mm)
+let placeType = 'pillar';
+const typeOf = pl => TYPES[pl.type || 'pillar'];
+function newItem(type) {
+  const T = TYPES[type];
+  return T.point ? { id: 'p' + pillarSeq++, type, w: POINT, d: POINT, rot: 0, h: T.h } : { id: 'p' + pillarSeq++, type, w: T.w, d: T.d, rot: 0 };
+}
+// perto de uma parede (até 40 cm da face), o item encosta nela por dentro e gira junto; longe, fica solto onde tocou.
+// Ponto (tomada, água...) fica em cima da linha da parede.
+function placePillar(w, pl) {
+  const vs = verts(), o = orientOf(), sp = toS(w);
+  let best = null;
+  draft.segs.forEach((s, i) => {
+    const A = toS(vs[i]), [dx, dy] = D(s.dir);
+    const t = Math.max(0, Math.min(s.len, ((sp[0] - A[0]) * dx + (sp[1] - A[1]) * dy) / view.sc));
+    const at = wallAt(i, t, vs, o), d = dist(sp, at.p) / view.sc;
+    if (d < 400 + pl.d / 2 && (!best || d < best.d)) best = { i, t, at, d };
+  });
+  if (best) {
+    const s = draft.segs[best.i], t = Math.max(pl.w / 2, Math.min(s.len - pl.w / 2, r50(best.t)));
+    const at = wallAt(best.i, t, vs, o), inn = [-at.n[0], -at.n[1]], half = typeOf(pl).point ? 0 : pl.d / 2;
+    const c = toW(at.p[0] + inn[0] * half * view.sc, at.p[1] + inn[1] * half * view.sc);
+    return { ...pl, x: c.x, y: c.y, rot: angOf(-at.n[1], at.n[0]), wall: best.i };
+  }
+  return { ...pl, x: r50(w.x), y: r50(w.y), wall: null };
+}
+function inPillar(p, pl) {
+  const c = toS(pl), r = -pl.rot * Math.PI / 180, dx = p[0] - c[0], dy = p[1] - c[1];
+  const lx = dx * Math.cos(r) - dy * Math.sin(r), ly = dx * Math.sin(r) + dy * Math.cos(r);
+  return Math.abs(lx) <= pl.w / 2 * view.sc + 8 && Math.abs(ly) <= pl.d / 2 * view.sc + 8;
+}
+// "Mais detalhes" aberto ou fechado fica lembrado: quem abre uma vez (o experiente) já encontra aberto depois
+let detailsOpen = false;
+try { detailsOpen = localStorage.getItem('esq-details') === '1'; } catch { }
+function pillarSheet(id) {
+  const pl = draft.pillars.find(x => x.id === id); if (!pl) return;
+  selected = { pillar: id }; render();
+  const T = typeOf(pl), n = draft.pillars.filter(x => typeOf(x) === T).indexOf(pl) + 1, nm = T.name.toLowerCase();
+  const basic = T.point
+    ? `<div class="row"><span>Altura do chão</span><button class="val" data-a="h">${fmtCm(pl.h)} ✎</button></div>`
+    : `<div class="row"><span>${pl.type === 'stair' || pl.type === 'beam' ? 'Comprimento' : 'Largura'}${pl.wall !== null ? ' (ao longo da parede)' : ''}</span><button class="val" data-a="w">${fmtCm(pl.w)} ✎</button></div>
+       <div class="row"><span>${pl.type === 'stair' ? 'Largura dos degraus' : 'Profundidade'}${pl.wall !== null ? ' (saindo da parede)' : ''}</span><button class="val" data-a="d">${fmtCm(pl.d)} ✎</button></div>`;
+  const det = T.details.map(f => f.opts
+    ? `<div class="row"><span>${f.label}</span><div class="seg3">${f.opts.map(([v, l]) => `<button data-f="${f.key}" data-v="${v}" class="${(pl[f.key] ?? f.opts[0][0]) === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>`
+    : `<div class="row"><span>${f.label}</span><button class="val" data-n="${f.key}">${fmtCm(pl[f.key] ?? f.num)} ✎</button></div>`).join('');
+  sheet(`<h3>${T.icon} ${T.name}${n > 1 || draft.pillars.filter(x => typeOf(x) === T).length > 1 ? ' ' + n : ''}</h3>
+    ${basic}
+    ${det ? `<details class="more"${detailsOpen ? ' open' : ''}><summary>Mais detalhes</summary>${det}</details>` : ''}
+    <p class="small">${pl.wall !== null ? (T.point ? 'Na parede ' : 'Encostado na parede ') + (pl.wall + 1) + '. ' : ''}Arraste no desenho para mudar de lugar.</p>
+    <div class="actions"><button class="btn danger" data-a="rm">Remover</button><button class="btn pri" data-a="x">Pronto</button></div>`, (sh, close) => {
+    sh.querySelector('details')?.addEventListener('toggle', e => { detailsOpen = e.target.open; try { localStorage.setItem('esq-details', detailsOpen ? '1' : '0'); } catch { } });
+    sh.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      const a = b.dataset.a, q = () => draft.pillars.find(x => x.id === id);
+      if (a === 'x') close();
+      if (a === 'rm') { pushUndo(); draft.pillars = draft.pillars.filter(x => x.id !== id); close(); }
+      if (b.dataset.f) { pushUndo(); q()[b.dataset.f] = b.dataset.v; close(); pillarSheet(id); }
+      if (b.dataset.n) {
+        const f = T.details.find(x => x.key === b.dataset.n);
+        keypad(f.label, pl[f.key] ?? f.num, '', v => { pushUndo(); q()[f.key] = v; close(); pillarSheet(id); });
+      }
+      if (a === 'h') keypad('Altura do chão até ' + (pl.type === 'ac' ? 'o aparelho' : 'o ponto'), pl.h, '', v => { pushUndo(); q().h = v; close(); pillarSheet(id); });
+      if (a === 'w' || a === 'd') keypad((a === 'w' ? 'Largura' : 'Profundidade') + ' — ' + nm, pl[a], 'Mínimo 10 cm.', v => {
+        pushUndo(); const it = q(); it[a] = Math.max(100, v);
+        if (it.wall !== null) Object.assign(it, placePillar({ x: it.x, y: it.y }, it));
+        close(); pillarSheet(id);
+      });
+    });
+  });
+}
+// grade do "+ Mais": poucos itens por grupo, ícone e nome; escolher arma a colocação com um toque no desenho
+function moreSheet() {
+  sheet(`<h3>Colocar no cômodo</h3>${GROUPS.map((g, gi) => `<p class="grp">${g}</p><div class="grid">${Object.entries(TYPES).filter(([, T]) => T.group === gi)
+    .map(([k, T]) => `<button class="gitem" data-t="${k}"><span>${T.icon}</span>${T.name}</button>`).join('')}</div>`).join('')}
+    <p class="small">Tudo entra com um tamanho padrão. Toque no item depois para ajustar.</p>`, (sh, close) => {
+    sh.addEventListener('click', e => {
+      const b = e.target.closest('[data-t]'); if (!b) return;
+      placeType = b.dataset.t; fTool = 'pillar'; pTool = null; close();
+      toast(TYPES[placeType].point ? 'Toque na parede onde fica: ' + TYPES[placeType].name.toLowerCase() : 'Toque onde fica: ' + TYPES[placeType].name.toLowerCase() + '. Perto de uma parede, encosta nela.');
+      render();
+    });
+  });
+}
+
+// ---------- caneta guiada ----------
+function penMove(dir) {
+  if (draft.closed) { toast('A sala está fechada. Desfaça para continuar.'); return false; }
+  const segs = draft.segs, last = segs[segs.length - 1], st = pStep;
+  if (last && last.dir === opp(dir)) { // seta contrária: volta e apaga
+    last.len -= st;
+    if (last.len <= 0) { const rest = -last.len; segs.pop(); if (rest > 0) segs.push(newSeg(dir, rest)); }
+    else trimOps(last);
+    activeOp = null; normalize(draft); return true;
+  }
+  let seg;
+  if (last && last.dir === dir) {
+    seg = last;
+    // a curva ligada ou desligada vale para a parede em que se anda
+    if (seg.curve !== pCurve) { seg.curve = pCurve; seg.sag = null; }
+  } else {
+    if (last && pTool && pTool !== 'passage' && last.ops.some(o => o.id === activeOp)) { toast(KIND[pTool].name + ' termina no canto'); pTool = null; }
+    seg = newSeg(dir, 0); seg.curve = pCurve; segs.push(seg); activeOp = null;
+  }
+  const before = seg.len; seg.len += st;
+  if (pTool) {
+    {
+      let op = seg.ops.find(o => o.id === activeOp);
+      if (op && op.start + op.width === before) op.width += st;
+      else { op = { id: 'o' + opSeq++, kind: pTool, start: before, width: st }; seg.ops.push(op); activeOp = op.id; }
+    }
+  }
+  return true;
+}
+let holdT = null;
+function startHold(dir, btn) {
+  stopHold();
+  if (draft.closed) { toast('A sala está fechada. Desfaça para continuar.'); return; }
+  pushUndo();
+  if (!penMove(dir)) return;
+  btn.classList.add('press'); render();
+  const t0 = Date.now();
+  holdT = setTimeout(function tick() {
+    if (!penMove(dir)) return stopHold();
+    render();
+    holdT = setTimeout(tick, Date.now() - t0 > 1600 ? 35 : 95);
+  }, 380);
+}
+function stopHold() { clearTimeout(holdT); holdT = null; document.querySelectorAll('.dpad .press').forEach(b => b.classList.remove('press')); }
+
+// ---------- reconhecimento do traço ----------
+function resample(pts, S) {
+  const out = [pts[0].slice()]; let D = 0, prev = pts[0];
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i]; let d = dist(prev, p);
+    while (D + d >= S && d > 0) {
+      const t = (S - D) / d, q = [prev[0] + t * (p[0] - prev[0]), prev[1] + t * (p[1] - prev[1])];
+      out.push(q); prev = q; d = dist(prev, p); D = 0;
+    }
+    D += d; prev = p;
+  }
+  if (dist(out[out.length - 1], pts[pts.length - 1]) > S * 0.3) out.push(pts[pts.length - 1].slice());
+  return out;
+}
+// ShortStraw (canudo curto) + mudança de direção: o canto é onde o canudo encolhe e o traço vira de verdade
+function findCorners(Pp) {
+  const w = 3, k = 6, n = Pp.length;
+  if (n < 2 * w + 3) return [0, n - 1];
+  const straw = new Array(n).fill(Infinity);
+  for (let i = w; i < n - w; i++) straw[i] = dist(Pp[i - w], Pp[i + w]);
+  const sorted = straw.slice(w, n - w).sort((a, b) => a - b), t = sorted[sorted.length >> 1] * 0.95;
+  const ang = i => {
+    const a = Pp[Math.max(0, i - k)], b = Pp[i], c = Pp[Math.min(n - 1, i + k)];
+    const v1 = [b[0] - a[0], b[1] - a[1]], v2 = [c[0] - b[0], c[1] - b[1]];
+    return Math.abs(Math.atan2(v1[0] * v2[1] - v1[1] * v2[0], v1[0] * v2[0] + v1[1] * v2[1]));
+  };
+  const A = Pp.map((_, i) => ang(i)), cand = [];
+  for (let i = 2; i < n - 2; i++) {
+    if (A[i] > 0.87 && A[i] >= A[i - 1] && A[i] >= A[i + 1] && (straw[i] < t || A[i] > 1.2)) cand.push(i);
+  }
+  const res = [0];
+  for (const c of cand) {
+    const lastC = res[res.length - 1];
+    if (c - lastC < 2 * w) { if (res.length > 1 && A[c] > A[lastC]) res[res.length - 1] = c; }
+    else res.push(c);
+  }
+  if (res.length > 1 && n - 1 - res[res.length - 1] < 2 * w) res.pop();
+  res.push(n - 1);
+  return res;
+}
+function analyze(Pp, part) {
+  const a = Pp[part.i0], b = Pp[part.i1], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1;
+  const dir = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 0 : 180) : (dy >= 0 ? 90 : 270);
+  const nx = dy / L, ny = -dx / L; let sag = 0; // + = à esquerda de quem anda
+  for (let i = part.i0; i <= part.i1; i++) {
+    const v = (Pp[i][0] - a[0]) * nx + (Pp[i][1] - a[1]) * ny;
+    if (Math.abs(v) > Math.abs(sag)) sag = v;
+  }
+  return { i0: part.i0, i1: part.i1, dir, chord: L, proj: isV(dir) ? Math.abs(dy) : Math.abs(dx), sag };
+}
+function mergeSameDir(Pp, parts) {
+  for (let i = 0; i + 1 < parts.length; i++) {
+    if (parts[i].dir === parts[i + 1].dir) { parts.splice(i, 2, analyze(Pp, { i0: parts[i].i0, i1: parts[i + 1].i1 })); i--; }
+  }
+  return parts;
+}
+function recognize(raw) {
+  const xs = raw.map(p => p[0]), ys = raw.map(p => p[1]);
+  const diag = Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+  if (diag < 30) { toast('Traço muito pequeno'); return; }
+  const endS = draft.segs.length && !draft.closed ? toS(endW()) : null;
+  if (draft.segs.length && !(endS && dist(endS, raw[0]) < 44) && gestureOpening(raw)) return;
+  const Pp = resample(raw, Math.min(12, Math.max(4, diag / 40)));
+  const corners = findCorners(Pp);
+  let parts = [];
+  for (let c = 0; c + 1 < corners.length; c++) parts.push(analyze(Pp, { i0: corners[c], i1: corners[c + 1] }));
+  parts = mergeSameDir(Pp, parts);
+  const total = parts.reduce((s, p) => s + p.proj, 0);
+  parts = mergeSameDir(Pp, parts.filter(p => p.proj >= Math.max(total * 0.04, 12)));
+  if (!parts.length) { toast('Não reconheci paredes nesse traço'); return; }
+
+  dbg = { pts: Pp.map(p => toW(p[0], p[1])), corners: corners.map(i => toW(Pp[i][0], Pp[i][1])) };
+  ghost = raw.map(p => toW(p[0], p[1]));
+  clearTimeout(ghostTimer); ghostTimer = setTimeout(() => { ghost = null; render(); }, 1400);
+
+  const sc = view.sc;
+  const segs = parts.map(p => {
+    const s = newSeg(p.dir, Math.max(100, Math.round(p.proj / sc / 100) * 100));
+    const curved = Math.abs(p.sag) > Math.max(8, 0.1 * p.chord);
+    s._bl = curved ? Math.sign(p.sag) * Math.max(50, r50(Math.abs(p.sag) / sc)) : 0;
+    return s;
+  });
+
+  pushUndo();
+  const end = draft.segs.length && !draft.closed ? toS(verts()[draft.segs.length]) : null;
+  const append = end && dist(end, raw[0]) < 44;
+  if (!append) {
+    const w0 = toW(raw[0][0], raw[0][1]);
+    draft = emptyDraft(); draft.start = { x: Math.round(w0.x / 100) * 100, y: Math.round(w0.y / 100) * 100 };
+  }
+  draft.segs.push(...segs);
+  const o = orientOf();
+  for (const s of draft.segs) {
+    if (s._bl !== undefined) {
+      if (s._bl) { const out = o > 0 ? Math.sign(s._bl) : -Math.sign(s._bl); s.curve = out; s.sag = Math.min(Math.abs(s._bl), Math.floor(s.len / 2)); }
+      delete s._bl;
+    }
+  }
+  normalize(draft);
+  const startS = toS(draft.start);
+  if (draft.segs.length >= 2 && dist(raw[raw.length - 1], startS) < Math.max(44, 0.18 * diag)) closeDraft(true);
+  if (draft.closed) toast('Sala fechada com ' + draft.segs.length + ' paredes. Toque numa medida para corrigir.');
+  else toast('Comece o próximo traço na ponta para continuar, ou use Fechar sala');
+  ensureVisible();
+}
+
+// ---------- aberturas ----------
+function addOpening(i, kind, start, width, extra = {}) {
+  const s = draft.segs[i];
+  start = Math.max(0, Math.min(r50(start), s.len - 300)); width = Math.min(r50(width), s.len - start);
+  if (width < 300) { toast('Parede curta demais para ' + KIND[kind].name.toLowerCase()); return false; }
+  if (s.ops.some(o => start < o.start + o.width && o.start < start + width)) { toast('Já tem abertura nesse trecho'); return false; }
+  pushUndo(); s.ops.push({ id: 'o' + opSeq++, kind, start, width, ...extra }); return true;
+}
+function freeSpotFor(i, w) {
+  const s = draft.segs[i], ops = s.ops.slice().sort((a, b) => a.start - b.start);
+  let best = null, cur = 0;
+  for (const o of [...ops, { start: s.len, width: 0 }]) {
+    const room = o.start - cur;
+    if (room >= Math.min(w, 300) && (!best || room > best.room)) best = { start: cur, room };
+    cur = Math.max(cur, o.start + o.width);
+  }
+  if (!best) return null;
+  const width = Math.min(w, best.room);
+  return { start: r50(best.start + (best.room - width) / 2), width };
+}
+function setLen(i, mm, quiet) {
+  const s = draft.segs[i]; mm = Math.max(100, Math.round(mm));
+  if (s.curve && (s.sag ?? 0) * 2 > mm) { toast('A curva não cabe nesse comprimento; diminua a flecha antes'); return false; }
+  const delta = mm - s.len;
+  if (!delta) return true;
+  if (draft.closed) {
+    const n = draft.segs.length; let j = -1;
+    for (let k = 1; k < n; k++) { const jj = (i + k) % n; if (draft.segs[jj].dir === opp(s.dir)) { j = jj; break; } }
+    if (j >= 0) {
+      const c = draft.segs[j];
+      if (c.len + delta < 100) { toast('Não fecha: a parede ' + (j + 1) + ' ficaria menor que 10 cm'); return false; }
+      if (!quiet) pushUndo();
+      s.len = mm; c.len += delta; trimOps(s); trimOps(c);
+      toast('A parede ' + (j + 1) + ' ajustou para ' + fmtM(c.len) + ' m para fechar');
+      return true;
+    }
+    // sem parede paralela do outro lado: os cantos depois desta andam junto e a última parede fecha
+    if (!quiet) pushUndo();
+    const base = JSON.parse(snap()), U = uniq(base).map(p => ({ ...p })), [dx, dy] = D(s.dir);
+    const from = i + 1 < n ? i + 1 : 0, to = i + 1 < n ? n - 1 : 0;
+    for (let k = from; k <= to; k++) { U[k].x += dx * delta; U[k].y += dy * delta; }
+    rebuildFrom(U, base);
+    toast('A parede ' + (i + 1 < n ? n : 1) + ' ajustou para fechar');
+    return true;
+  }
+  if (!quiet) pushUndo();
+  s.len = mm; trimOps(s); return true;
+}
+// ângulo do canto no começo da parede i (entre a parede anterior e ela): gira esta parede e as seguintes; a última fecha
+function setCornerAngle(i, A) {
+  const n = draft.segs.length, prev = i > 0 ? i - 1 : draft.closed ? n - 1 : -1;
+  if (prev < 0 || A <= 0 || A >= 360) return false;
+  const o = orientOf(), t = normA(draft.segs[i].dir - draft.segs[prev].dir), cur = t > 180 ? t - 360 : t;
+  const want = (180 - A) * o, delta = want - cur;
+  if (Math.abs(delta) < 1e-6) return true;
+  const base = JSON.parse(snap()), U = uniq(base).map(p => ({ ...p })), c = U[i], r = delta * Math.PI / 180;
+  const rot = p => ({ x: c.x + (p.x - c.x) * Math.cos(r) - (p.y - c.y) * Math.sin(r), y: c.y + (p.x - c.x) * Math.sin(r) + (p.y - c.y) * Math.cos(r) });
+  const last = base.closed ? n - 1 : U.length - 1;
+  for (let k = i + 1; k <= last; k++) U[k] = rot(U[k]);
+  rebuildFrom(U, base);
+  return true;
+}
+// interior do canto no começo da parede i, em graus (90 = esquadro)
+function cornerAt(i) {
+  const n = draft.segs.length, prev = i > 0 ? i - 1 : draft.closed ? n - 1 : -1;
+  if (prev < 0) return null;
+  const t = normA(draft.segs[i].dir - draft.segs[prev].dir), cur = t > 180 ? t - 360 : t;
+  return normA(180 - cur * orientOf());
+}
+// arrastar canto no modo Livre: vai para onde o dedo está; perto de alinhar com um vizinho, gruda (parede no esquadro)
+function dragVertexFree(base, k, w) {
+  const U = uniq(base).map(p => ({ ...p })), m = U.length, tol = 10 / view.sc;
+  const p = { x: r50(w.x), y: r50(w.y) };
+  const nb = [k > 0 || base.closed ? (k - 1 + m) % m : -1, k + 1 < m || base.closed ? (k + 1) % m : -1].filter(j => j >= 0 && j !== k);
+  for (const j of nb) { if (Math.abs(w.x - U[j].x) < tol) p.x = U[j].x; if (Math.abs(w.y - U[j].y) < tol) p.y = U[j].y; }
+  U[k] = p;
+  rebuildFrom(U, base);
+}
+
+// ---------- vista ----------
+function allPoints() {
+  const v = verts(); if (mode !== 'finger' && !draft.closed && draft.segs.length >= 2) {
+    let p = v[v.length - 1];
+    for (const c of closingSegs()) { p = { x: p.x + D(c.dir)[0] * c.len, y: p.y + D(c.dir)[1] * c.len }; v.push(p); }
+  }
+  return v;
+}
+function fitView(force) {
+  const v = allPoints();
+  // sem parede ainda: só o botão põe a vista no começo (o primeiro canto tocado não pode pular de lugar)
+  if (!draft.segs.length) { if (force && !draft.anchored) view = { sc: MAX_SC, tx: 80 - draft.start.x * MAX_SC, ty: 90 - draft.start.y * MAX_SC }; return; }
+  // margem só para as medidas por fora das paredes (e os botões flutuantes à direita); o cômodo ocupa a tela
+  const xs = v.map(p => p.x), ys = v.map(p => p.y), m = 48, mr = 88, cv = covered(), mt = cv.top + 22, mb = cv.bottom + 26;
+  const bw = Math.max(1, Math.max(...xs) - Math.min(...xs)), bh = Math.max(1, Math.max(...ys) - Math.min(...ys));
+  // desenhando (sala aberta) não aproxima além da escala de desenhar, para o traço não mudar de tamanho a cada parede
+  const sc = Math.max(0.01, Math.min(draft.closed ? FIT_MAX_SC : MAX_SC, (W - m - mr) / bw, (H - mt - mb) / bh));
+  const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+  view = { sc, tx: m + (W - m - mr) / 2 - cx * sc, ty: mt + (H - mt - mb) / 2 - cy * sc };
+}
+// faixas do desenho cobertas pelos botões flutuantes (em cima: desfazer/refazer; embaixo: controles do modo)
+function covered() { const c = $('#controls'); return { top: 56, bottom: (c ? c.offsetHeight : 0) + 6 }; }
+// seguindo, o render já enquadra; com a vista arrastada pelo usuário, ela fica parada onde ele deixou
+function ensureVisible() { }
+
+// ---------- desenho ----------
+function quadPts(A, C, B, n = 16) {
+  const out = [];
+  for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; out.push([u * u * A[0] + 2 * u * t * C[0] + t * t * B[0], u * u * A[1] + 2 * u * t * C[1] + t * t * B[1]]); }
+  return out;
+}
+function render() {
+  const box = $('#cv').getBoundingClientRect(); W = box.width; H = box.height;
+  // seguir (como o GPS): a cada mudança o desenho se enquadra sozinho, menos no meio de um toque
+  if (follow && !gesture) fitView(false);
+  const sc = view.sc, o = orientOf(), vs = verts();
+  let h = '';
+  const w0 = toW(0, 0), w1 = toW(W, H);
+  for (let x = Math.floor(w0.x / 500) * 500; x <= w1.x; x += 500) { const X = x * sc + view.tx; h += `<line class="${x % 1000 ? 'g1' : 'g2'}" x1="${X}" y1="0" x2="${X}" y2="${H}"/>`; }
+  for (let y = Math.floor(w0.y / 500) * 500; y <= w1.y; y += 500) { const Y = y * sc + view.ty; h += `<line class="${y % 1000 ? 'g1' : 'g2'}" x1="0" y1="${Y}" x2="${W}" y2="${Y}"/>`; }
+
+  if (ghost) h += `<polyline class="inkghost" points="${ghost.map(p => P(toS(p))).join(' ')}"/>`;
+
+  if (!draft.closed && draft.segs.length >= 2 && mode !== 'finger') {
+    let p = vs[vs.length - 1], d = 'M' + P(toS(p));
+    for (const c of closingSegs()) { p = { x: p.x + D(c.dir)[0] * c.len, y: p.y + D(c.dir)[1] * c.len }; d += 'L' + P(toS(p)); }
+    h += `<path class="ghostwall" d="${d}"/>`;
+  }
+
+  hits = { walls: [], labels: [], verts: [], grips: [] };
+  let opsSvg = '', lblSvg = '';
+  draft.segs.forEach((s, i) => {
+    const A = toS(vs[i]), B = toS(vs[i + 1]), n = outN(s.dir, o), bl = bulgeOf(s), [dx, dy] = D(s.dir);
+    const M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
+    let d, poly;
+    if (bl) { const C = [M[0] + n[0] * 2 * bl * sc, M[1] + n[1] * 2 * bl * sc]; d = `M${P(A)}Q${P(C)} ${P(B)}`; poly = quadPts(A, C, B); }
+    else { d = `M${P(A)}L${P(B)}`; poly = [A, B]; }
+    h += `<path class="wall${bl ? ' curved' : ''}${selected && selected.i === i && !selected.op ? ' sel' : ''}" d="${d}"/>`;
+    hits.walls.push(poly);
+
+    for (const op of s.ops) {
+      // a abertura segue a parede (reta ou curva): pontos e normais tirados dela
+      const run = wallRun(i, op.start, op.start + op.width, vs, o), w1 = run[0], w2 = run[run.length - 1], p1 = w1.p, p2 = w2.p;
+      const line = (pts, attrs) => `<polyline points="${pts.map(P).join(' ')}" fill="none" ${attrs}/>`;
+      const off = k => run.map(w => [w.p[0] + w.n[0] * k, w.p[1] + w.n[1] * k]);
+      const c = KIND[op.kind].color, tk = 7;
+      opsSvg += line(run.map(w => w.p), 'class="gap"');
+      if (selected && selected.i === i && selected.op === op.id) opsSvg += line(run.map(w => w.p), 'stroke="var(--primary)" stroke-width="14" stroke-opacity=".3" stroke-linecap="round"');
+      const tick = w => `<line x1="${w.p[0] + w.n[0] * tk}" y1="${w.p[1] + w.n[1] * tk}" x2="${w.p[0] - w.n[0] * tk}" y2="${w.p[1] - w.n[1] * tk}" stroke="${c}" stroke-width="2"/>`;
+      opsSvg += tick(w1) + tick(w2);
+      if (op.kind === 'door') {
+        const hw = op.hinge === 'end' ? w2 : w1, hp = hw.p, fp = op.hinge === 'end' ? p1 : p2, ld = op.swing === 'out' ? hw.n : [-hw.n[0], -hw.n[1]];
+        const r = dist(hp, fp), leaf = [hp[0] + ld[0] * r, hp[1] + ld[1] * r];
+        const a1 = Math.atan2(leaf[1] - hp[1], leaf[0] - hp[0]), a2 = Math.atan2(fp[1] - hp[1], fp[0] - hp[0]);
+        let dl = a2 - a1; while (dl > Math.PI) dl -= 2 * Math.PI; while (dl < -Math.PI) dl += 2 * Math.PI;
+        opsSvg += `<line x1="${hp[0]}" y1="${hp[1]}" x2="${leaf[0]}" y2="${leaf[1]}" stroke="${c}" stroke-width="2.5"/>`;
+        opsSvg += `<path d="M${P(leaf)}A${r} ${r} 0 0 ${dl > 0 ? 1 : 0} ${P(fp)}" stroke="${c}" stroke-width="1.2" fill="none" stroke-dasharray="3 3"/>`;
+      } else if (op.kind === 'window') {
+        for (const k of [-3, 0, 3]) opsSvg += line(off(k), `stroke="${c}" stroke-width="${k ? 1.2 : 2}"`);
+      } else {
+        opsSvg += line(run.map(w => w.p), `stroke="${c}" stroke-width="1.4" stroke-dasharray="4 4"`);
+      }
+    }
+
+    const apex = [M[0] + n[0] * bl * sc, M[1] + n[1] * bl * sc];
+    const L = [apex[0] + n[0] * 20, apex[1] + n[1] * 20], N = [apex[0] - n[0] * 17, apex[1] - n[1] * 17];
+    const txt = fmtM(s.len) + (bl ? ' ⌒' : ''), tw = txt.length * 7 + 14;
+    lblSvg += `<g class="lbl" transform="translate(${P(L)})"><rect x="${-tw / 2}" y="-11" width="${tw}" height="22" rx="11"/><text>${txt}</text></g>`;
+    lblSvg += `<g class="num" transform="translate(${P(N)})"><circle r="9"/><text>${i + 1}</text></g>`;
+    hits.labels.push(L);
+  });
+  h += opsSvg;
+  // pilares: retângulo cinza hachurado, girado com a parede em que encosta
+  // itens: cada tipo com seu símbolo de planta, girado com a parede em que encosta
+  (draft.pillars || []).forEach(pl => {
+    const c = toS(pl), w = pl.w * sc, d = pl.d * sc, sel = selected && selected.pillar === pl.id, T = typeOf(pl);
+    const st = `stroke="${sel ? 'var(--primary)' : 'var(--ink)'}" stroke-width="${sel ? 3 : 1.6}"`;
+    let g = '';
+    if (T.point) {
+      g = `<circle r="11" fill="#fff" ${st}/><text y="1" font-size="12" text-anchor="middle" dominant-baseline="central">${T.icon}</text>`;
+    } else if (pl.type === 'stair') {
+      // degraus de ~28 cm e a seta para o lado que sobe
+      const k = Math.max(2, Math.round(pl.w / 280)), up = pl.up === 'start' ? -1 : 1;
+      g = `<rect x="${-w / 2}" y="${-d / 2}" width="${w}" height="${d}" fill="#efe9df" ${st}/>`;
+      for (let j = 1; j < k; j++) { const x = -w / 2 + w * j / k; g += `<line x1="${x}" y1="${-d / 2}" x2="${x}" y2="${d / 2}" stroke="var(--ink)" stroke-width="1" opacity=".6"/>`; }
+      g += `<path d="M${-up * w * .4},0L${up * w * .4},0M${up * w * .4 - up * 8},-6L${up * w * .4},0L${up * w * .4 - up * 8},6" stroke="var(--door)" stroke-width="2" fill="none"/>`;
+    } else if (pl.type === 'beam') {
+      g = `<rect x="${-w / 2}" y="${-d / 2}" width="${w}" height="${d}" fill="none" ${st} stroke-dasharray="6 4"/>`;
+    } else if (pl.type === 'fridge' || pl.type === 'washer') {
+      g = `<rect x="${-w / 2}" y="${-d / 2}" width="${w}" height="${d}" fill="#fff" ${st} rx="3"/><text y="1" font-size="${Math.min(16, d * .5)}" text-anchor="middle" dominant-baseline="central" transform="rotate(${-pl.rot})">${T.icon}</text>`;
+    } else if (pl.shape === 'round') {
+      g = `<ellipse rx="${w / 2}" ry="${d / 2}" fill="#c9cfcb" ${st}/>`;
+    } else {
+      g = `<rect x="${-w / 2}" y="${-d / 2}" width="${w}" height="${d}" fill="${pl.type === 'shaft' ? '#d7dde4' : '#c9cfcb'}" ${st}/>
+        <path d="M${-w / 2},${-d / 2}L${w / 2},${d / 2}${pl.type === 'shaft' ? '' : `M${w / 2},${-d / 2}L${-w / 2},${d / 2}`}" stroke="var(--ink)" stroke-width="1" opacity=".55"/>`;
+    }
+    h += `<g transform="translate(${P(c)}) rotate(${pl.rot})">${g}</g>`;
+  });
+  h += lblSvg;
+
+  if (mode === 'corners' || mode === 'free') {
+    draft.segs.forEach((s, i) => {
+      if (bulgeOf(s)) { hits.grips.push(null); return; }
+      const A = toS(vs[i]), B = toS(vs[i + 1]), M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
+      hits.grips.push(M);
+      h += `<rect x="-11" y="-4" width="22" height="8" rx="4" fill="#fff" stroke="var(--primary)" stroke-width="2" transform="translate(${P(M)}) rotate(${s.dir})"/>`;
+    });
+    if (draft.segs.length || draft.anchored) for (const u of uniq()) {
+      const S = toS(u); hits.verts.push(S);
+      h += `<circle cx="${S[0]}" cy="${S[1]}" r="8" fill="#fff" stroke="var(--primary)" stroke-width="2.5"/>`;
+    }
+  }
+  // prévia da parede que está sendo puxada (Parede) ou do canto que vai entrar (Cantos)
+  if (gesture && gesture.moved !== undefined && (gesture.kind === 'wall' && gesture.moved || gesture.kind === 'corner') && !draft.closed) {
+    let a = null;
+    if (gesture.kind === 'wall') a = wallFromDrag(gesture);
+    else if (draft.segs.length || draft.anchored) a = { ...axisFrom(endW(), snapW(gesture.preview)), from: endW() };
+    if (a && a.len >= 100) {
+      const fromS = toS(a.from);
+      const to = [fromS[0] + D(a.dir)[0] * a.len * sc, fromS[1] + D(a.dir)[1] * a.len * sc], mid = [(fromS[0] + to[0]) / 2, (fromS[1] + to[1]) / 2];
+      h += `<line x1="${fromS[0]}" y1="${fromS[1]}" x2="${to[0]}" y2="${to[1]}" stroke="var(--blue)" stroke-width="6" stroke-opacity=".5" stroke-dasharray="10 6"/>`;
+      h += `<circle cx="${to[0]}" cy="${to[1]}" r="7" fill="var(--blue)"/>`;
+      if (a.aligned) { const S = toS(draft.start); h += `<line x1="${to[0]}" y1="${to[1]}" x2="${S[0]}" y2="${S[1]}" stroke="var(--primary)" stroke-width="1.5" stroke-dasharray="2 4"/>`; }
+      const last = draft.segs[draft.segs.length - 1];
+      const txt = fmtM(a.len) + (mode === 'free' && last ? ' · ' + fmtAng(cornerBetween(last.dir, a.dir)) : mode === 'free' && !isAxis(a.dir) ? ' · ' + fmtAng(a.dir) : ''), tw = txt.length * 8.5 + 18;
+      h += `<g transform="translate(${P(mid)})"><rect x="${-tw / 2}" y="-30" width="${tw}" height="26" rx="13" fill="var(--blue)"/><text y="-17" fill="#fff" font-size="15" font-weight="700" text-anchor="middle" dominant-baseline="central">${txt}</text></g>`;
+      if (a.closes) h += `<circle cx="${to[0]}" cy="${to[1]}" r="14" fill="none" stroke="var(--primary)" stroke-width="3"/>`;
+    }
+    if (gesture.kind === 'corner') { const S = toS(snapW(gesture.preview)); h += `<circle cx="${S[0]}" cy="${S[1]}" r="5" fill="none" stroke="var(--blue)" stroke-width="2"/>`; }
+  }
+
+  if (fdrag && fdrag.t1 !== undefined) {
+    const s = draft.segs[fdrag.i];
+    const a = Math.min(fdrag.t0, fdrag.t1), b = Math.max(fdrag.t0, fdrag.t1);
+    h += `<polyline points="${wallRun(fdrag.i, a, b, vs, o).map(w => P(w.p)).join(" ")}" fill="none" stroke="${KIND[fdrag.kind].color}" stroke-width="12" stroke-opacity=".55" stroke-linecap="round"/>`;
+  }
+
+  if (!draft.closed && (draft.segs.length || (draft.anchored && mode !== 'pen'))) {
+    const S = toS(draft.start), E = toS(vs[vs.length - 1]);
+    const near = draft.segs.length >= 2 && Math.hypot(vs[vs.length - 1].x - draft.start.x, vs[vs.length - 1].y - draft.start.y) <= 600;
+    h += `<circle cx="${S[0]}" cy="${S[1]}" r="${mode === 'corners' || mode === 'free' ? 13 : 8}" fill="none" stroke="var(--primary)" stroke-width="2"${near ? ' class="pulse"' : ''}/>`;
+    if (mode !== 'pen' && mode !== 'corners' && mode !== 'free') h += `<circle cx="${E[0]}" cy="${E[1]}" r="10" fill="rgba(0,101,143,.15)" stroke="var(--blue)" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+  }
+  if (mode === 'measure' && !draft.closed && !draft.segs.length) {
+    const S = toS(draft.start); h += `<circle cx="${S[0]}" cy="${S[1]}" r="8" fill="var(--primary)"/><text x="${S[0] + 14}" y="${S[1] + 4}" font-size="12" fill="var(--muted)">a primeira parede sai daqui</text>`;
+  }
+  if (mode === 'pen' && !draft.closed) {
+    const E = toS(vs[vs.length - 1]), last = draft.segs[draft.segs.length - 1];
+    const col = pTool ? KIND[pTool].color : pCurve ? 'var(--curve)' : 'var(--primary)';
+    if (last) {
+      const [dx, dy] = D(last.dir), tip = [E[0] + dx * 22, E[1] + dy * 22], bl = [E[0] + dx * 14 - dy * 6, E[1] + dy * 14 + dx * 6], br = [E[0] + dx * 14 + dy * 6, E[1] + dy * 14 - dx * 6];
+      h += `<path d="M${P(tip)}L${P(bl)}L${P(br)}Z" fill="${col}"/>`;
+    }
+    h += `<circle cx="${E[0]}" cy="${E[1]}" r="11" fill="${col}" stroke="#fff" stroke-width="3"/>`;
+    if (!draft.segs.length) h += `<text x="${E[0] + 18}" y="${E[1] + 4}" font-size="12" fill="var(--muted)">comece aqui</text>`;
+  }
+
+  if (showDebug && dbg) {
+    h += dbg.pts.map(p => { const s = toS(p); return `<circle cx="${s[0]}" cy="${s[1]}" r="1.8" fill="#00658f"/>`; }).join('');
+    h += dbg.corners.map(p => { const s = toS(p); return `<circle cx="${s[0]}" cy="${s[1]}" r="6" fill="none" stroke="#b3261e" stroke-width="2"/>`; }).join('');
+  }
+  $('#scene').innerHTML = h;
+  renderControls();
+}
+
+function renderControls() {
+  $('#undoBtn').disabled = !undoS.length; $('#redoBtn').disabled = !redoS.length;
+  $('#doneBtn').disabled = !draft.closed;
+  document.querySelectorAll('.modes button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+  const canClose = !draft.closed && draft.segs.length >= 2;
+  const chip = (k, on, label) => `<button class="chip${on ? ' on' : ''}" data-k="${k}"><span class="sw" style="background:${k === 'curve' ? 'var(--curve)' : k === 'incline' ? 'var(--primary)' : KIND[k].color}"></span>${label}</button>`;
+  let c = '';
+  if (mode === 'finger') {
+    c += `<p class="hint">${fTool && fTool !== 'pillar' ? 'Arraste sobre uma parede para marcar a ' + KIND[fTool].name.toLowerCase() + '. Toque de novo no botão para desligar.' : draft.segs.length ? 'Risque em cima de uma parede: <b>arco</b> = porta, <b>zigue-zague</b> = janela, <b>risco reto</b> = vão. Toque numa medida para corrigir. Um traço longe das paredes começa outro cômodo.' : 'Desenhe o contorno do cômodo com o dedo, num traço só.'}</p>`;
+    if (canClose) c += `<button class="btn sec" data-act="close">Fechar sala</button>`;
+  } else if (mode === 'corners') {
+    c += `<p class="hint">${draft.closed ? (cornersFree ? 'Arraste um canto para inclinar as paredes ligadas a ele. Toque numa parede para digitar a medida e o ângulo do canto.' : 'Arraste uma bolinha (canto) ou a barrinha de uma parede para ajustar no esquadro. Para inclinar, ligue Inclinar. Toque numa parede para as medidas.') : !draft.segs.length && !draft.anchored ? 'Toque onde fica o primeiro canto do cômodo.' : 'Toque onde fica o próximo canto. Toque no primeiro canto (anel) para fechar.'}</p>`;
+    c += `<div class="chips">${chip('incline', cornersFree, 'Inclinar: ' + (cornersFree ? 'sim' : 'não'))}<button class="btn sec" data-act="close" ${canClose ? '' : 'disabled'}>Fechar sala</button></div>`;
+  } else if (mode === 'free') {
+    const curveLbl = pCurve === 0 ? 'Curva: não' : pCurve > 0 ? 'Curva: p/ fora' : 'Curva: p/ dentro';
+    c += `<div class="chips">${chip('curve', pCurve !== 0, curveLbl)}</div>`;
+    c += `<p class="hint">${draft.closed ? 'Toque numa parede para ver e mudar as medidas e o canto. Arraste as bolinhas ou a barrinha das paredes para ajustar.' : !draft.segs.length && !draft.anchored ? 'Toque para pôr o primeiro canto ou arraste para puxar a primeira parede. Vale parede inclinada.' : 'Toque no próximo canto ou arraste para puxar a parede. Perto de 45° e 90° ela gruda. Toque no anel do começo para fechar.'}</p>`;
+    c += `<div class="chips"><button class="btn sec" data-act="newwall" ${draft.closed ? 'disabled' : ''}>+ Parede pela medida</button><button class="btn sec" data-act="close" ${canClose ? '' : 'disabled'}>Fechar sala</button></div>`;
+  } else if (mode === 'walls') {
+    const curveLbl = pCurve === 0 ? 'Curva: não' : pCurve > 0 ? 'Curva: p/ fora' : 'Curva: p/ dentro';
+    c += `<div class="chips">${chip('curve', pCurve !== 0, curveLbl)}</div>`;
+    c += `<p class="hint">${draft.closed ? 'Sala fechada. Toque numa medida ou parede para corrigir.' : draft.segs.length ? 'Arraste para puxar a próxima parede a partir da ponta.' : 'Arraste o dedo para puxar a primeira parede.'}</p>`;
+    c += `<button class="btn sec" data-act="close" ${canClose ? '' : 'disabled'}>Fechar sala</button>`;
+  } else if (mode === 'measure') {
+    const curveLbl = pCurve === 0 ? 'Curva: não' : pCurve > 0 ? 'Curva: p/ fora' : 'Curva: p/ dentro';
+    c += `<div class="chips">${chip('curve', pCurve !== 0, curveLbl)}</div>`;
+    c += `<div class="penrow"><div class="dpad">
+      <span></span><button data-mdir="270">▲</button><span></span>
+      <button data-mdir="180">◀</button><button class="mid" disabled>direção<br>da parede</button><button data-mdir="0">▶</button>
+      <span></span><button data-mdir="90">▼</button><span></span></div>
+      <div class="pencol">
+        <button class="btn sec" data-act="close" ${canClose ? '' : 'disabled'}>Fechar sala</button>
+        <p class="hint">${draft.closed ? 'Sala fechada. Toque numa medida para corrigir.' : 'Toque na seta para onde a parede vai e digite a medida da trena.'}</p>
+      </div></div>`;
+  } else {
+    const curveLbl = pCurve === 0 ? 'Curva: não' : pCurve > 0 ? 'Curva: p/ fora' : 'Curva: p/ dentro';
+    c += `<div class="chips">${chip('curve', pCurve !== 0, curveLbl)}</div>`;
+    c += `<div class="penrow"><div class="dpad">
+      <span></span><button data-dir="270">▲</button><span></span>
+      <button data-dir="180">◀</button><button class="mid" data-act="step">passo<br>${fmtCm(pStep)}</button><button data-dir="0">▶</button>
+      <span></span><button data-dir="90">▼</button><span></span></div>
+      <div class="pencol">
+        <button class="btn sec" data-act="close" ${canClose ? '' : 'disabled'}>Fechar sala</button>
+        <p class="hint">${pTool ? 'Andando com ' + KIND[pTool].name.toLowerCase() + ' ligada: o caminho vira a abertura.' : draft.closed ? 'Sala fechada. Toque numa parede para corrigir.' : 'Cada toque anda ' + fmtCm(pStep) + '. Segure para ir rápido.'}</p>
+      </div></div>`;
+  }
+  if (fTool === 'pillar') c = `<p class="hint">${TYPES[placeType].point ? 'Toque na parede onde fica: ' : 'Toque onde fica: '}${TYPES[placeType].name.toLowerCase()}.${TYPES[placeType].point ? '' : ' Perto de uma parede, encosta nela.'} Toque no + para desistir.</p>` + c;
+  else if (fTool && mode !== 'pen' && mode !== 'finger') c = `<p class="hint">Arraste sobre uma parede para marcar a ${KIND[fTool].name.toLowerCase()}. Toque de novo no botão para desligar.</p>` + c;
+  // na Caneta as aberturas são da caneta (pTool); o pilar é sempre de tocar (fTool)
+  const active = fTool === 'pillar' ? 'pillar' : mode === 'pen' ? pTool : fTool;
+  document.querySelectorAll('.fab[data-k]').forEach(b => b.classList.toggle('on', b.dataset.k === active));
+  document.querySelector('.fablbl')?.remove();
+  if (active) {
+    const b = document.querySelector(`.fab[data-k="${active}"]`), l = document.createElement('span');
+    l.className = 'fablbl'; l.textContent = active === 'pillar' ? TYPES[placeType].name : KIND[active].name; l.style.top = (b.offsetTop + 9) + 'px';
+    $('#fabs').appendChild(l);
+  }
+  // seguir (como o GPS): o botão de enquadrar só aparece depois que a vista foi arrastada
+  $('#fitBtn').hidden = follow; $('#fabs').style.top = follow ? '10px' : '54px';
+  // só recria quando muda: recriar o direcional no meio de um toque segurado perderia o "soltar"
+  if (renderControls.last !== c) { $('#controls').innerHTML = c; renderControls.last = c; }
+}
+
+// ---------- folhas (bottom sheets) ----------
+// a folha de baixo só existe com algo selecionado; ao fechar a última, a seleção some do desenho
+let selected = null;
+function sheet(html, mount) {
+  const s = document.createElement('div'); s.className = 'scrim';
+  s.innerHTML = `<div class="sheet">${html}</div>`;
+  const close = () => { s.remove(); if (!document.querySelector('.scrim')) { selected = null; render(); } };
+  s.addEventListener('pointerdown', e => { if (e.target === s) close(); });
+  $('#screen').appendChild(s); mount && mount(s, close); return s;
+}
+function select(i, op) { selected = { i, op }; render(); }
+function keypad(title, mm, unitNote, done, unit = 'cm') {
+  const scale = unit === 'cm' ? 10 : 1;
+  let txt = String(Math.round(mm / scale * 10) / 10).replace('.', ','), fresh = true;
+  sheet(`<h3>${title}</h3><div class="kp-display"><span id="kpv">${txt}</span><small>${unit}</small></div>
+    ${unitNote ? `<p class="small">${unitNote}</p>` : ''}
+    <div class="kp">${[1, 2, 3, 4, 5, 6, 7, 8, 9, ',', 0, '⌫'].map(k => `<button data-k="${k}">${k}</button>`).join('')}</div>
+    <div class="actions"><button class="btn ghost" data-a="x">Cancelar</button><button class="btn pri" data-a="ok">OK</button></div>`, (s, close) => {
+    s.addEventListener('click', e => {
+      const k = e.target.dataset.k, a = e.target.dataset.a;
+      if (k !== undefined) {
+        if (k === '⌫') txt = fresh ? '' : txt.slice(0, -1);
+        else if (k === ',') { if (fresh) txt = '0'; if (!txt.includes(',')) txt += ','; }
+        else txt = (fresh || txt === '0' ? '' : txt) + k;
+        fresh = false; s.querySelector('#kpv').textContent = txt || '0';
+      }
+      if (a === 'x') close();
+      if (a === 'ok') { const v = parseFloat((txt || '0').replace(',', '.')); close(); if (v > 0) done(unit === 'cm' ? Math.round(v * 10) : v); }
+    });
+  });
+}
+// modo Livre: tocar numa parede abre as medidas dela; nada muda até o OK
+function freeSheet(i) {
+  select(i);
+  const s = draft.segs[i]; if (!s) return;
+  const st = { len: s.len, ang: cornerAt(i), curve: s.curve, sag: Math.abs(bulgeOf(s)) || null };
+  const opsHtml = s.ops.slice().sort((a, b) => a.start - b.start).map(o => `<div class="opitem"><span class="sw" style="width:10px;height:10px;border-radius:3px;background:${KIND[o.kind].color}"></span>
+    <span class="grow">${KIND[o.kind].name} · ${fmtCm(o.width)} · a ${fmtCm(o.start)} do início</span><button data-op="${o.id}">✎</button></div>`).join('');
+  const body = () => `<h3>Parede ${i + 1}</h3>
+    <div class="row"><span>Comprimento${st.curve ? ' (reta entre as pontas)' : ''}</span><button class="val" data-a="len">${fmtM(st.len)} m ✎</button></div>
+    ${st.ang !== null ? `<div class="row"><span>Canto com a parede ${i > 0 ? i : draft.segs.length}</span><button class="val" data-a="ang">${fmtAng(st.ang)} ✎</button></div>` : ''}
+    <div class="row"><span>Formato</span><div class="seg3">
+      <button data-c="0" class="${st.curve === 0 ? 'on' : ''}">Reta</button><button data-c="1" class="${st.curve === 1 ? 'on' : ''}">Curva p/ fora</button><button data-c="-1" class="${st.curve === -1 ? 'on' : ''}">p/ dentro</button></div></div>
+    ${st.curve ? `<div class="row"><span>Flecha (barriga no meio)</span><button class="val" data-a="sag">${fmtCm(st.sag ?? autoSag(st.len))} ✎</button></div>` : ''}
+    <div style="padding-top:8px"><span style="color:var(--muted);font-size:14px">Aberturas</span>
+      <div class="oplist">${opsHtml || '<span class="small">Nenhuma.</span>'}</div>
+      <div class="chips">${['door', 'window', 'passage'].map(k => `<button class="chip" data-add="${k}">+ ${KIND[k].name}</button>`).join('')}</div>
+    </div>
+    <p class="small">${st.ang !== null ? '90° é canto no esquadro. ' : ''}${draft.closed ? 'Com a sala fechada, uma parede vizinha se ajusta para continuar fechando.' : ''}</p>
+    <div class="actions"><button class="btn ghost" data-a="x">Cancelar</button><button class="btn pri" data-a="ok">OK</button></div>`;
+  sheet(body(), (sh, close) => {
+    const redraw = () => { sh.querySelector('.sheet').innerHTML = body(); };
+    sh.addEventListener('click', e => {
+      const t = e.target.closest('button'); if (!t) return;
+      if (t.dataset.a === 'x') close();
+      if (t.dataset.a === 'len') keypad('Comprimento da parede ' + (i + 1), st.len, '', v => { st.len = v; redraw(); });
+      if (t.dataset.a === 'ang') keypad('Canto no começo da parede ' + (i + 1), st.ang, '90 = esquadro. Mais que 180 é canto para dentro da sala.', v => { st.ang = v; redraw(); }, '°');
+      if (t.dataset.a === 'sag') keypad('Flecha da parede ' + (i + 1), st.sag ?? autoSag(st.len), 'Até a metade do comprimento.', v => { st.sag = v; redraw(); });
+      if (t.dataset.c !== undefined) {
+        const c = +t.dataset.c;
+        st.curve = c; redraw();
+      }
+      if (t.dataset.add) {
+        const k = t.dataset.add, spot = freeSpotFor(i, KIND[k].w);
+        if (!spot) { toast('Não cabe mais abertura nessa parede'); return; }
+        if (addOpening(i, k, spot.start, spot.width)) { render(); close(); freeSheet(i); }
+      }
+      if (t.dataset.op) { close(); opSheet(i, t.dataset.op); }
+      if (t.dataset.a === 'ok') {
+        const before = snap(); pushUndo();
+        const seg = draft.segs[i];
+        seg.curve = st.curve; seg.sag = st.curve ? Math.min(r50(st.sag ?? autoSag(st.len)) || 50, Math.floor(st.len / 2)) : null;
+        let ok = setLen(i, st.len, true);
+        if (ok && st.ang !== null && Math.abs(st.ang - cornerAt(i)) > 0.05) ok = setCornerAngle(i, st.ang);
+        if (!ok) { draft = JSON.parse(before); undoS.pop(); return; }
+        if (crosses(verts())) toast('Atenção: agora há paredes se cruzando');
+        close(); ensureVisible(); render();
+      }
+    });
+  });
+}
+// modo Livre: parede nova pelas medidas (comprimento + canto + para que lado vira)
+function newWallSheet() {
+  if (draft.closed) { toast('A sala está fechada. Desfaça para continuar.'); return; }
+  const last = draft.segs[draft.segs.length - 1];
+  const st = { len: 3000, ang: 90, side: orientOf() > 0 ? 1 : -1, dir: 0 };
+  const dirs = [[0, '▶'], [90, '▼'], [180, '◀'], [270, '▲']];
+  const body = () => `<h3>Parede ${draft.segs.length + 1} pela medida</h3>
+    <div class="row"><span>Comprimento</span><button class="val" data-a="len">${fmtM(st.len)} m ✎</button></div>
+    ${last ? `<div class="row"><span>Canto com a parede ${draft.segs.length}</span><button class="val" data-a="ang">${fmtAng(st.ang)} ✎</button></div>
+    <div class="row"><span>Vira para</span><div class="seg3"><button data-s="-1" class="${st.side < 0 ? 'on' : ''}">Esquerda</button><button data-s="1" class="${st.side > 0 ? 'on' : ''}">Direita</button></div></div>`
+    : `<div class="row"><span>Direção</span><div class="seg3">${dirs.map(([d, l]) => `<button data-d="${d}" class="${st.dir === d ? 'on' : ''}">${l}</button>`).join('')}</div></div>`}
+    <div class="actions"><button class="btn ghost" data-a="x">Cancelar</button><button class="btn pri" data-a="ok">OK</button></div>`;
+  sheet(body(), (sh, close) => {
+    const redraw = () => { sh.querySelector('.sheet').innerHTML = body(); };
+    sh.addEventListener('click', e => {
+      const t = e.target.closest('button'); if (!t) return;
+      if (t.dataset.a === 'x') close();
+      if (t.dataset.a === 'len') keypad('Comprimento', st.len, '', v => { st.len = v; redraw(); });
+      if (t.dataset.a === 'ang') keypad('Canto entre as paredes', st.ang, '90 = esquadro.', v => { st.ang = v; redraw(); }, '°');
+      if (t.dataset.s) { st.side = +t.dataset.s; redraw(); }
+      if (t.dataset.d) { st.dir = +t.dataset.d; redraw(); }
+      if (t.dataset.a === 'ok') {
+        const dir = last ? normA(last.dir + st.side * (180 - Math.min(179, Math.max(1, st.ang)))) : st.dir;
+        close(); if (addWall(dir, st.len)) render();
+      }
+    });
+  });
+}
+function wallSheet(i) {
+  select(i);
+  const s = draft.segs[i]; if (!s) return;
+  const cv = s.curve;
+  const opsHtml = s.ops.slice().sort((a, b) => a.start - b.start).map(o => `<div class="opitem"><span class="sw" style="width:10px;height:10px;border-radius:3px;background:${KIND[o.kind].color}"></span>
+    <span class="grow">${KIND[o.kind].name} · ${fmtCm(o.width)} · a ${fmtCm(o.start)} do início</span><button data-op="${o.id}">✎</button></div>`).join('');
+  sheet(`<h3>Parede ${i + 1}</h3>
+    <div class="row"><span>Comprimento${cv ? ' (reta entre as pontas)' : ''}</span><button class="val" data-a="len">${fmtM(s.len)} m ✎</button></div>
+    <div class="row"><span>Formato</span><div class="seg3">
+      <button data-c="0" class="${cv === 0 ? 'on' : ''}">Reta</button><button data-c="1" class="${cv === 1 ? 'on' : ''}">Curva p/ fora</button><button data-c="-1" class="${cv === -1 ? 'on' : ''}">p/ dentro</button></div></div>
+    ${cv ? `<div class="row"><span>Flecha (barriga no meio)</span><button class="val" data-a="sag">${fmtCm(Math.abs(bulgeOf(s)))} ✎</button></div>` : ''}
+    <div style="padding-top:8px"><span style="color:var(--muted);font-size:14px">Aberturas</span>
+      <div class="oplist">${opsHtml || '<span class="small">Nenhuma.</span>'}</div>
+      <div class="chips">${['door', 'window', 'passage'].map(k => `<button class="chip" data-add="${k}">+ ${KIND[k].name}</button>`).join('')}</div>
+    </div>
+    ${draft.closed ? `<p class="small">Com a sala fechada, mudar o comprimento ajusta a parede oposta mais próxima para continuar fechando.</p>` : ''}
+    <div class="actions"><button class="btn pri" data-a="x">Pronto</button></div>`, (sh, close) => {
+    sh.addEventListener('click', e => {
+      const t = e.target.closest('button'); if (!t) return;
+      if (t.dataset.a === 'x') close();
+      if (t.dataset.a === 'len') keypad('Comprimento da parede ' + (i + 1), s.len, '', v => { setLen(i, v); render(); close(); wallSheet(i); });
+      if (t.dataset.a === 'sag') keypad('Flecha da parede ' + (i + 1), Math.abs(bulgeOf(s)), 'Até a metade do comprimento (' + fmtCm(Math.floor(s.len / 2)) + ').', v => {
+        pushUndo(); s.sag = Math.min(r50(v) || 50, Math.floor(s.len / 2)); render(); close(); wallSheet(i);
+      });
+      if (t.dataset.c !== undefined) {
+        const c = +t.dataset.c;
+        pushUndo(); s.curve = c; if (!c) s.sag = null; render(); close(); wallSheet(i);
+      }
+      if (t.dataset.add) {
+        const k = t.dataset.add, spot = freeSpotFor(i, KIND[k].w);
+        if (!spot) { toast('Não cabe mais abertura nessa parede'); return; }
+        if (addOpening(i, k, spot.start, spot.width)) { render(); close(); wallSheet(i); }
+      }
+      if (t.dataset.op) { close(); opSheet(i, t.dataset.op); }
+    });
+  });
+}
+function opSheet(i, id) {
+  select(i, id);
+  const s = draft.segs[i], op = s && s.ops.find(o => o.id === id); if (!op) return;
+  const room = () => s.ops.filter(o => o !== op);
+  const fits = (st, w) => st >= 0 && st + w <= s.len && w >= 300 && !room().some(o => st < o.start + o.width && o.start < st + w);
+  sheet(`<h3>${KIND[op.kind].name} na parede ${i + 1}</h3>
+    <div class="row"><span>Distância do início da parede</span><button class="val" data-a="st">${fmtCm(op.start)} ✎</button></div>
+    <div class="row"><span>Largura</span><button class="val" data-a="w">${fmtCm(op.width)} ✎</button></div>
+    <div class="row"><span>Tipo</span><div class="seg3">${['door', 'window', 'passage'].map(k => `<button data-k="${k}" class="${op.kind === k ? 'on' : ''}">${KIND[k].name}</button>`).join('')}</div></div>
+    ${op.kind === 'door' ? `<div class="row"><span>Abre para</span><div class="seg3"><button data-sw="in" class="${op.swing !== 'out' ? 'on' : ''}">Dentro</button><button data-sw="out" class="${op.swing === 'out' ? 'on' : ''}">Fora</button></div></div>
+    <div class="row"><span>Dobradiça</span><div class="seg3"><button data-hg="start" class="${op.hinge !== 'end' ? 'on' : ''}">No início</button><button data-hg="end" class="${op.hinge === 'end' ? 'on' : ''}">No fim</button></div></div>` : ''}
+    <div class="actions"><button class="btn danger" data-a="rm">Remover</button><button class="btn pri" data-a="x">Pronto</button></div>`, (sh, close) => {
+    sh.addEventListener('click', e => {
+      const t = e.target.closest('button'); if (!t) return;
+      if (t.dataset.a === 'x') close();
+      if (t.dataset.a === 'rm') { pushUndo(); s.ops = room(); render(); close(); }
+      if (t.dataset.k) { pushUndo(); op.kind = t.dataset.k; render(); close(); opSheet(i, id); }
+      if (t.dataset.sw) { pushUndo(); op.swing = t.dataset.sw; render(); close(); opSheet(i, id); }
+      if (t.dataset.hg) { pushUndo(); op.hinge = t.dataset.hg; render(); close(); opSheet(i, id); }
+      if (t.dataset.a === 'st') keypad('Distância do início', op.start, '', v => { if (!fits(v, op.width)) return toast('Não cabe nessa posição'); pushUndo(); op.start = v; render(); close(); opSheet(i, id); });
+      if (t.dataset.a === 'w') keypad('Largura', op.width, 'Mínimo 30 cm.', v => { if (!fits(op.start, v)) return toast('Não cabe com essa largura'); pushUndo(); op.width = v; render(); close(); opSheet(i, id); });
+    });
+  });
+}
+function crosses(vs) {
+  const n = vs.length - 1, seg = i => [vs[i], vs[i + 1]];
+  const inter = (a, b, c, d) => {
+    const o = (p, q, r) => Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+    const on = (p, q, r) => Math.min(p.x, q.x) <= r.x && r.x <= Math.max(p.x, q.x) && Math.min(p.y, q.y) <= r.y && r.y <= Math.max(p.y, q.y);
+    const o1 = o(a, b, c), o2 = o(a, b, d), o3 = o(c, d, a), o4 = o(c, d, b);
+    if (o1 !== o2 && o3 !== o4) return true;
+    return (!o1 && on(a, b, c)) || (!o2 && on(a, b, d)) || (!o3 && on(c, d, a)) || (!o4 && on(c, d, b));
+  };
+  for (let i = 0; i < n; i++) for (let j = i + 2; j < n; j++) {
+    if (i === 0 && j === n - 1) continue;
+    const [a, b] = seg(i), [c, d] = seg(j); if (inter(a, b, c, d)) return true;
+  }
+  return false;
+}
+function resultSheet() {
+  let d = JSON.parse(snap());
+  if (orientOf(d) < 0) d.segs = d.segs.slice().reverse().map(s => ({ ...s, dir: opp(s.dir), ops: s.ops.map(o => ({ ...o, start: s.len - o.start - o.width, hinge: o.hinge === 'end' ? 'start' : o.hinge ? 'end' : o.kind === 'door' ? 'end' : undefined })) }));
+  const vs = verts(d); let k = 0, best = null;
+  d.segs.forEach((s, i) => { if (s.dir === 0 && (!best || vs[i].y < best.y || (vs[i].y === best.y && vs[i].x < best.x))) { best = vs[i]; k = i; } });
+  d.segs = d.segs.slice(k).concat(d.segs.slice(0, k));
+  const n = d.segs.length, id = i => String.fromCharCode(65 + (i % 26)) + (i >= 26 ? Math.floor(i / 26) : '');
+  const walls = d.segs.map((s, i) => {
+    const nx = d.segs[(i + 1) % n].dir, a = D(s.dir), b = D(nx), w = { id: id(i), length: Math.round(s.len), turn: a[0] * b[1] - a[1] * b[0] > 0 ? 'right' : 'left' };
+    // canto fora do esquadro: quanto a parede seguinte gira (90 = esquadro); proposta de campo novo no motor
+    const t = Math.abs(normA(nx - s.dir) > 180 ? normA(nx - s.dir) - 360 : normA(nx - s.dir));
+    if (Math.abs(t - 90) > 0.05) w.turnAngle = Math.round(t * 10) / 10;
+    const bl = bulgeOf(s); if (bl) w.bulge = bl; return w;
+  });
+  const ops = [{ op: 'createRoom', shape: 'custom', walls, ceilingHeight: 2600 }];
+  d.segs.forEach((s, i) => s.ops.forEach(o => {
+    const add = { op: 'addOpening', kind: o.kind, wall: id(i), start: o.start, width: o.width };
+    if (o.kind === 'door' && o.hinge === 'end') add.hinge = 'right';
+    if (o.kind === 'door' && o.swing === 'out') add.swing = 'out';
+    ops.push(add);
+  }));
+  // pilares: centro medido a partir do começo da parede A (x para a direita, z para baixo na planta)
+  const origin = verts(d)[0];
+  for (const pl of draft.pillars || []) {
+    const T = typeOf(pl), op = { op: 'addFixture', type: pl.type || 'pillar', x: Math.round(pl.x - origin.x), z: Math.round(pl.y - origin.y), rotation: Math.round(pl.rot * 10) / 10 };
+    if (T.point) op.height = pl.h; else { op.width = pl.w; op.depth = pl.d; }
+    for (const f of T.details) op[f.key] = pl[f.key] ?? (f.opts ? f.opts[0][0] : f.num);
+    if (pl.wall !== null && pl.wall !== undefined) op.againstWall = true;
+    ops.push(op);
+  }
+  const warns = [];
+  if (d.segs.some(s => s.curve && s.ops.length)) warns.push('Tem abertura em parede curva. O motor hoje recusa: precisaria aceitar aberturas na curva (posição medida na reta entre as pontas) no 3D e no plano de corte.');
+  if ((draft.pillars || []).length) warns.push('O motor ainda não tem esses itens do ambiente: <code>addFixture</code> é uma proposta de operação nova (planta, 3D, avisos de colisão com os móveis).');
+  if (crosses(verts(draft))) warns.push('Algumas paredes se cruzam. Corrija antes de criar o cômodo.');
+  if (d.segs.some(s => s.ops.some(o => o.width < 300))) warns.push('Tem abertura com menos de 30 cm; o motor recusa.');
+  if (walls.some(w => w.turnAngle)) warns.push('Tem canto fora do esquadro. O motor hoje só aceita cantos de 90°: precisaria do campo novo <code>turnAngle</code> nas paredes (e no 3D, no plano de corte e nos golden).');
+  const list = walls.map((w, i) => `<li><b>Parede ${w.id}</b> · ${fmtM(w.length)} m${w.turnAngle ? ` · canto de ${fmtAng(180 - w.turnAngle)} no fim` : ''}${w.bulge ? ` · curva ${w.bulge > 0 ? 'para fora' : 'para dentro'} ${fmtCm(Math.abs(w.bulge))}` : ''} · vira à ${w.turn === 'right' ? 'direita' : 'esquerda'}${d.segs[i].ops.map(o => `<br><span style="color:${KIND[o.kind].color}">${KIND[o.kind].name} de ${fmtCm(o.width)} a ${fmtCm(o.start)} do início</span>`).join('')}</li>`).join('');
+  const pls = (draft.pillars || []).map(pl => `<li><b>${typeOf(pl).icon} ${typeOf(pl).name}</b> · ${typeOf(pl).point ? 'a ' + fmtCm(pl.h) + ' do chão' : fmtCm(pl.w) + ' × ' + fmtCm(pl.d)}${pl.wall !== null && pl.wall !== undefined ? ' · parede ' + (pl.wall + 1) : ''}</li>`).join('');
+  sheet(`<h3>Cômodo com ${n} paredes</h3>${warns.map(w => `<div class="warn">${w}</div>`).join('')}
+    <ul class="res-list">${list}${pls}</ul>
+    <p class="small">O que iria para o motor (proposta: <code>createRoom</code> com <code>shape: "custom"</code>):</p>
+    <pre>${JSON.stringify(ops, null, 1)}</pre>
+    <div class="actions"><button class="btn ghost" data-a="x">Voltar a editar</button><button class="btn pri" data-a="new">Novo desenho</button></div>`, (sh, close) => {
+    sh.addEventListener('click', e => {
+      const a = e.target.dataset.a; if (a === 'x') close();
+      if (a === 'new') { close(); reset(); }
+    });
+  });
+}
+function reset() { follow = true; draft = emptyDraft(); undoS = []; redoS = []; pTool = null; fTool = null; pCurve = 0; activeOp = null; dbg = null; ghost = null; fitView(true); render(); }
+
+// ---------- toque ----------
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2400); }
+$('#screen').addEventListener('pointerdown', e => {
+  const r = $('#screen').getBoundingClientRect(), d = document.createElement('div');
+  d.className = 'ripple'; d.style.left = (e.clientX - r.left) + 'px'; d.style.top = (e.clientY - r.top) + 'px';
+  $('#screen').appendChild(d); setTimeout(() => d.remove(), 500);
+}, true);
+
+function distToPoly(p, poly) {
+  let best = Infinity;
+  for (let i = 0; i + 1 < poly.length; i++) {
+    const a = poly[i], b = poly[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L));
+    best = Math.min(best, Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy));
+  }
+  return best;
+}
+// parede mais perto (reta ou curva) e a posição (mm desde o início, medida na reta entre as pontas) projetada nela
+function nearestWall(p, maxPx) {
+  const vs = verts(), o = orientOf(); let best = null;
+  draft.segs.forEach((s, i) => {
+    const A = toS(vs[i]), [dx, dy] = D(s.dir);
+    const t = Math.max(0, Math.min(s.len, ((p[0] - A[0]) * dx + (p[1] - A[1]) * dy) / view.sc));
+    const dd = dist(p, wallAt(i, t, vs, o).p);
+    if (dd < maxPx && (!best || dd < best.d)) best = { i, t, d: dd };
+  });
+  return best;
+}
+// medidas e canto pela folha com OK nos modos de cantos; a folha imediata nos outros
+const wallSheetFor = i => (mode === 'free' || mode === 'corners' ? freeSheet : wallSheet)(i);
+function tapAt(p) {
+  const vs = verts(), o = orientOf();
+  for (const pl of draft.pillars || []) if (inPillar(p, pl)) return pillarSheet(pl.id);
+  for (let i = 0; i < draft.segs.length; i++) {
+    for (const op of draft.segs[i].ops) {
+      if (distToPoly(p, wallRun(i, op.start, op.start + op.width, vs, o).map(w => w.p)) < 14) return opSheet(i, op.id);
+    }
+  }
+  for (let i = 0; i < hits.labels.length; i++) if (dist(p, hits.labels[i]) < 26) return wallSheetFor(i);
+  for (let i = 0; i < hits.walls.length; i++) if (distToPoly(p, hits.walls[i]) < 18) return wallSheetFor(i);
+}
+
+const cv = $('#cv');
+cv.addEventListener('pointerdown', e => {
+  if (e.button > 0) return;
+  try { cv.setPointerCapture(e.pointerId); } catch { }
+  const r = cv.getBoundingClientRect(), p = [e.clientX - r.left, e.clientY - r.top];
+  gesture = { raw: [p], moved: false, t0: Date.now(), last: p, kind: 'pan' };
+  const onLabel = hits.labels.some(l => dist(l, p) < 26);
+  const hitPillar = (draft.pillars || []).find(pl => inPillar(p, pl));
+  if (fTool === 'pillar') gesture.kind = 'placepillar';
+  // pilar se arrasta em qualquer modo; um toque nele abre a folha
+  else if (hitPillar) Object.assign(gesture, { kind: 'pillar', id: hitPillar.id, base: JSON.parse(snap()), w0: toW(p[0], p[1]), from: { x: hitPillar.x, y: hitPillar.y } });
+  // com um botão de abertura ligado (qualquer modo menos a Caneta), arrastar sobre a parede marca a abertura
+  else if (fTool && mode !== 'pen') {
+    gesture.kind = 'tool';
+    const n = nearestWall(p, 30);
+    if (!n) { toast('Arraste sobre uma parede'); gesture.kind = 'noop'; return; }
+    fdrag = { i: n.i, t0: n.t, kind: fTool };
+  } else if (mode === 'finger') {
+    gesture.kind = 'stroke';
+  } else if (mode === 'corners' || mode === 'free') {
+    const k = hits.verts.findIndex(v => dist(v, p) < 16), gi = hits.grips.findIndex(m => m && dist(m, p) < 14);
+    const onWall = hits.walls.some(w => distToPoly(p, w) < 18);
+    if (k >= 0) Object.assign(gesture, { kind: 'vertex', k, base: JSON.parse(snap()) });
+    else if (gi >= 0) Object.assign(gesture, { kind: 'wallmove', k: gi, base: JSON.parse(snap()), w0: toW(p[0], p[1]) });
+    // Livre: tocar no vazio põe canto, arrastar puxa parede, tocar na parede abre as medidas
+    else if (mode === 'free') { if (!onLabel && !onWall && !draft.closed) gesture.kind = 'wall'; }
+    else if (!onLabel && !draft.closed) { Object.assign(gesture, { kind: 'corner', preview: toW(p[0], p[1]) }); render(); }
+  } else if (mode === 'walls' && !onLabel && !draft.closed) gesture.kind = 'wall';
+});
+cv.addEventListener('pointermove', e => {
+  if (!gesture) return;
+  const r = cv.getBoundingClientRect(), p = [e.clientX - r.left, e.clientY - r.top], g = gesture;
+  if (!g.moved && dist(p, g.raw[0]) > 8) g.moved = true;
+  const prev = g.last; g.last = p;
+  if (g.kind === 'pan') { if (g.moved) { follow = false; view.tx += p[0] - prev[0]; view.ty += p[1] - prev[1]; render(); } }
+  else if (g.kind === 'pillar' && g.moved) {
+    const w = toW(p[0], p[1]), pl = draft.pillars.find(x => x.id === g.id);
+    Object.assign(pl, placePillar({ x: g.from.x + w.x - g.w0.x, y: g.from.y + w.y - g.w0.y }, pl)); render();
+  }
+  else if (g.kind === 'tool') {
+    const s = draft.segs[fdrag.i], A = toS(verts()[fdrag.i]), [dx, dy] = D(s.dir);
+    fdrag.t1 = Math.max(0, Math.min(s.len, ((p[0] - A[0]) * dx + (p[1] - A[1]) * dy) / view.sc)); render();
+  } else if (g.kind === 'stroke') {
+    g.raw.push(p);
+    if (g.moved) $('#live').setAttribute('points', g.raw.map(P).join(' '));
+  } else if (g.kind === 'vertex' && g.moved) { mode === 'free' || cornersFree ? dragVertexFree(g.base, g.k, toW(p[0], p[1])) : dragVertex(g.base, g.k, snapW(toW(p[0], p[1]))); render(); }
+  else if (g.kind === 'wallmove' && g.moved) { dragWall(g.base, g.k, g.w0, toW(p[0], p[1])); render(); }
+  else if (g.kind === 'corner') { g.preview = toW(p[0], p[1]); render(); }
+  else if (g.kind === 'wall') render();
+});
+function endGesture() {
+  const g = gesture; gesture = null; $('#live').setAttribute('points', '');
+  if (!g || g.kind === 'noop') { fdrag = null; render(); return; }
+  if (g.kind === 'tool') {
+    const f = fdrag; fdrag = null;
+    const s = draft.segs[f.i], w = KIND[f.kind].w;
+    let a = Math.min(f.t0, f.t1 ?? f.t0), b = Math.max(f.t0, f.t1 ?? f.t0);
+    if (!g.moved || b - a < 300) { a = f.t0 - w / 2; b = a + w; if (a < 0) { b -= a; a = 0; } if (b > s.len) { a -= b - s.len; b = s.len; } a = Math.max(0, a); }
+    addOpening(f.i, f.kind, a, b - a); render(); return;
+  }
+  if (g.kind === 'placepillar') {
+    const pl = placePillar(toW(g.raw[0][0], g.raw[0][1]), newItem(placeType)), T = TYPES[placeType];
+    pushUndo(); draft.pillars = [...(draft.pillars || []), pl];
+    // um item por vez: depois de pôr, o botão desliga (leigo não fica "preso" na ferramenta)
+    fTool = null;
+    toast(T.name + (pl.wall !== null ? (T.point ? ' na parede ' : ' encostado na parede ') + (pl.wall + 1) : ' no meio do cômodo') + '. Toque nele para ajustar.');
+    render(); return;
+  }
+  if (g.kind === 'pillar' && g.moved) { undoS.push(JSON.stringify(g.base)); redoS = []; render(); return; }
+  if (g.kind === 'corner') { placeCorner(g.preview); render(); return; }
+  // no modo Cantos, tocar no primeiro canto fecha a sala (a bolinha dele também serve para arrastar)
+  if (g.kind === 'vertex' && !g.moved && g.k === 0 && !draft.closed && draft.segs.length >= 2) {
+    pushUndo(); if (!closeDraft()) undoS.pop(); render(); return;
+  }
+  if (g.kind === 'wall' && !g.moved && mode === 'free') { placeCorner(toW(g.raw[0][0], g.raw[0][1])); render(); return; }
+  if (!g.moved) { render(); tapAt(g.raw[0]); return; }
+  if (g.kind === 'stroke') recognize(g.raw);
+  if (g.kind === 'vertex' || g.kind === 'wallmove') {
+    if (snap() !== JSON.stringify(g.base)) { undoS.push(JSON.stringify(g.base)); redoS = []; }
+    ensureVisible();
+  }
+  if (g.kind === 'wall') {
+    const a = wallFromDrag(g);
+    if (a.len < 100) toast('Arraste mais para puxar a parede');
+    else { if (!draft.segs.length && !draft.anchored) draft.start = a.from; addWall(a.dir, a.len); }
+  }
+  render();
+}
+cv.addEventListener('pointerup', endGesture);
+cv.addEventListener('pointercancel', endGesture);
+
+$('#controls').addEventListener('pointerdown', e => {
+  const b = e.target.closest('[data-dir]'); if (!b) return;
+  e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch { } startHold(+b.dataset.dir, b);
+});
+['pointerup', 'pointercancel'].forEach(ev => window.addEventListener(ev, () => { if (holdT || document.querySelector('.dpad .press')) { stopHold(); ensureVisible(); render(); } }));
+$('#controls').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.dir) return;
+  const k = b.dataset.k, a = b.dataset.act;
+  if (k === 'incline') {
+    cornersFree = !cornersFree;
+    toast(cornersFree ? 'Inclinar ligado: arraste um canto para inclinar as paredes dele; o toque aceita qualquer ângulo' : 'Inclinar desligado: tudo no esquadro');
+  } else if (k === 'curve') {
+    pCurve = pCurve === 0 ? 1 : pCurve === 1 ? -1 : 0;
+
+    if (pCurve) toast((mode === 'pen' ? 'A parede em que você andar' : 'A próxima parede') + ' sai curva ' + (pCurve > 0 ? 'para fora' : 'para dentro'));
+  } else if (k) {
+    if (mode === 'finger') fTool = fTool === k ? null : k;
+    else {
+      pTool = pTool === k ? null : k; activeOp = null;
+
+      if (pTool && draft.segs.length) {
+        const last = draft.segs[draft.segs.length - 1];
+      }
+    }
+  }
+  if (b.dataset.mdir) {
+    const d = +b.dataset.mdir, name = { 0: 'para a direita', 90: 'para baixo', 180: 'para a esquerda', 270: 'para cima' }[d];
+    if (draft.closed) toast('A sala está fechada. Desfaça para continuar.');
+    else keypad('Parede ' + (draft.segs.length + 1) + ' ' + name, 0, pCurve ? 'Ela sai curva ' + (pCurve > 0 ? 'para fora' : 'para dentro') + '.' : '', v => { addWall(d, v); render(); });
+  }
+  if (a === 'newwall') newWallSheet();
+  if (a === 'step') pStep = STEPS[(STEPS.indexOf(pStep) + 1) % STEPS.length];
+  if (a === 'close') { pushUndo(); if (!closeDraft()) undoS.pop(); ensureVisible(); }
+  render();
+});
+
+function showTip() {
+  const t = $('#tip');
+  if (tipsSeen.has(mode)) { t.hidden = true; return; }
+  t.innerHTML = ({
+    finger: '<b>Desenhe com o dedo.</b> Faça o contorno do cômodo num traço só e termine perto de onde começou. Os cantos viram 90°, e uma parede com barriga vira curva. Depois risque em cima das paredes para pôr porta (arco), janela (zigue-zague) ou vão (risco reto).',
+    pen: '<b>Caneta guiada.</b> Use as setas para andar com a bolinha: cada toque anda um passo, segurar acelera. Trocar de seta faz o canto. Ligue Porta, Janela ou Vão antes de andar.',
+    corners: '<b>Cantos.</b> Toque onde fica cada canto do cômodo, dando a volta na sala. As paredes saem retas e em 90°. Toque no primeiro canto para fechar. Depois arraste os cantos ou a barrinha das paredes para ajustar.',
+    walls: '<b>Parede a parede.</b> Arraste o dedo para puxar cada parede a partir da ponta. A medida aparece enquanto você arrasta. Solte para fixar e puxe a próxima. Chegando ao começo, a sala fecha.',
+    free: '<b>Livre.</b> Toque onde fica cada canto ou arraste para puxar cada parede. Vale parede inclinada: perto de 45° e 90° ela gruda. Toque numa parede para ver e mudar as medidas e o canto, e dê OK.',
+    measure: '<b>Direção e medida.</b> Toque na seta para onde a parede vai e digite a medida da trena. Repita até voltar ao começo, ou toque em Fechar sala.',
+  })[mode] + '<br><button>Entendi</button>';
+  t.hidden = false;
+  t.querySelector('button').onclick = () => { tipsSeen.add(mode); t.hidden = true; };
+}
+// barra de modos: rola com a roda do mouse, arrastando (como o dedo) e pelas setinhas das pontas
+const modesEl = $('.modes');
+function modeArrows() {
+  const max = modesEl.scrollWidth - modesEl.clientWidth;
+  $('.more.l').hidden = modesEl.scrollLeft <= 2; $('.more.r').hidden = modesEl.scrollLeft >= max - 2;
+}
+modesEl.addEventListener('scroll', modeArrows);
+modesEl.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); modesEl.scrollLeft += e.deltaY; } }, { passive: false });
+let modeDrag = null;
+modesEl.addEventListener('pointerdown', e => { modeDrag = { x: e.clientX, left: modesEl.scrollLeft, moved: false }; });
+window.addEventListener('pointermove', e => {
+  if (!modeDrag) return;
+  const dx = e.clientX - modeDrag.x;
+  if (Math.abs(dx) > 6) { modeDrag.moved = true; modesEl.scrollLeft = modeDrag.left - dx; }
+});
+window.addEventListener('pointerup', () => { if (modeDrag) setTimeout(() => { modeDrag = null; }, 0); });
+document.querySelectorAll('.more').forEach(b => b.addEventListener('click', () => { modesEl.scrollLeft += +b.dataset.scroll * 140; }));
+modeArrows();
+document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => {
+  if (modeDrag && modeDrag.moved) return; // foi rolagem, não toque
+  modesEl.scrollLeft = b.offsetLeft - (modesEl.clientWidth - b.offsetWidth) / 2;
+  mode = b.dataset.mode; fTool = null; stopHold(); fdrag = null; gesture = null;
+  if (!draft.segs.length && !draft.anchored) fitView(true);
+  showTip(); ensureVisible(); render();
+}));
+$('#fabs').addEventListener('click', e => {
+  const b = e.target.closest('.fab'); if (!b) return;
+  const k = b.dataset.k;
+  if (k === 'pillar') {
+    // "+ Mais": desliga se estava colocando; senão abre a grade de itens
+    if (fTool === 'pillar') fTool = null; else moreSheet();
+  } else if (mode === 'pen') {
+    if (fTool === 'pillar') fTool = null;
+    pTool = pTool === k ? null : k; activeOp = null;
+    if (pTool) toast('Ande com as setas: o caminho vira ' + (k === 'door' ? 'a porta' : k === 'window' ? 'a janela' : 'o vão'));
+  } else {
+    fTool = fTool === k ? null : k;
+    if (fTool && !draft.segs.length) toast('Desenhe as paredes primeiro');
+    else if (fTool) toast('Arraste sobre uma parede para marcar ' + (k === 'door' ? 'a porta' : k === 'window' ? 'a janela' : 'o vão'));
+  }
+  render();
+});
+$('#undoBtn').onclick = undo; $('#redoBtn').onclick = redo;
+$('#fitBtn').onclick = () => { follow = true; fitView(true); render(); };
+$('#doneBtn').onclick = () => { if (draft.closed) resultSheet(); };
+$('#cancelBtn').onclick = () => {
+  if (!draft.segs.length) return toast('Nada para descartar');
+  sheet(`<h3>Descartar o desenho?</h3><p class="small">As paredes desenhadas serão apagadas.</p>
+    <div class="actions"><button class="btn ghost" data-a="x">Continuar desenhando</button><button class="btn danger" data-a="ok">Descartar</button></div>`, (s, close) => {
+    s.addEventListener('click', e => { if (e.target.dataset.a === 'x') close(); if (e.target.dataset.a === 'ok') { close(); reset(); } });
+  });
+};
+$('#dbg').onchange = e => { showDebug = e.target.checked; render(); };
+window.addEventListener('resize', render);
+
+render(); fitView(true); render(); showTip();
+</script>
+</body>
+</html>
