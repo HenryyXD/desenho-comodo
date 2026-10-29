@@ -111,6 +111,43 @@
   .ripple { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(31,77,58,.25); pointer-events: none; animation: rip .45s ease-out forwards; z-index: 60; }
   @keyframes rip { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
 
+  /* ---------- tablet deitado: barra lateral, topo com ações, painel fixo à direita ---------- */
+  .devbar { display: flex; justify-content: center; gap: 4px; margin: 18px auto 0; background: var(--sheet); border-radius: 12px; padding: 3px; width: max-content; }
+  .devbar button { border: 0; background: transparent; padding: 8px 16px; border-radius: 10px; font: 600 14px system-ui, sans-serif; color: var(--muted); cursor: pointer; }
+  .devbar button.on { background: var(--surface); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .rail, .panel { display: none; }
+  .phone.tablet { width: min(1180px, calc(100vw - 32px)); height: min(820px, calc(100vh - 90px)); min-height: 600px; border-radius: 34px; padding: 14px; position: static; }
+  .phone.tablet .screen { border-radius: 22px; display: grid; grid-template-columns: 104px 1fr 340px; grid-template-rows: auto auto 1fr; grid-template-areas: "status status status" "app app app" "rail canvas panel"; }
+  .tablet .status { grid-area: status; }
+  .tablet .appbar { grid-area: app; border-bottom: 1px solid var(--line); padding: 4px 16px 8px; gap: 8px; }
+  .tablet .appbar .fabs.left { position: static; display: flex; gap: 6px; margin-right: 6px; }
+  .tablet .appbar .fit { position: static; margin-right: 6px; }
+  .tablet .canvas { grid-area: canvas; border: 0; }
+  .tablet .modeswrap { display: none; }
+  .tablet .rail { grid-area: rail; display: flex; flex-direction: column; gap: 10px; padding: 10px 8px; border-right: 1px solid var(--line); background: var(--sheet); overflow: auto; }
+  .tablet .rail .modes { flex-direction: column; background: none; padding: 0; gap: 4px; overflow: visible; }
+  .tablet .rail .modes button { flex: 0 0 auto; white-space: normal; padding: 8px 4px; font-size: 12px; text-align: center; }
+  .tablet .rail .sep { height: 1px; background: var(--line); margin: 2px 4px; }
+  .tablet .rail .fabs { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; justify-items: center; }
+  .tablet .rail .fab { width: 40px; height: 40px; }
+  .tablet .fablbl { display: none; }
+  .tablet .panel { grid-area: panel; display: flex; flex-direction: column; border-left: 1px solid var(--line); min-height: 0; background: var(--surface); }
+  .tablet #summary { flex: 1; overflow: auto; padding: 16px; }
+  .tablet .panel .controls { position: static; pointer-events: auto; padding: 12px 16px 16px; border-top: 1px solid var(--line); background: var(--sheet); }
+  .tablet .panel .controls .hint { box-shadow: none; background: var(--surface); }
+  .tablet .scrim { inset: auto; top: var(--paneltop, 80px); right: 0; bottom: 0; width: 340px; background: none; align-items: stretch; }
+  .tablet .sheet { border-radius: 0; max-height: none; height: 100%; border-left: 1px solid var(--line); box-shadow: -6px 0 16px rgba(0,0,0,.06); }
+  .tablet .tip { right: 16px; left: auto; width: 360px; }
+  .sum h3 { margin: 0 0 4px; font-size: 17px; }
+  .sum .stat { color: var(--muted); font-size: 13.5px; margin: 0 0 12px; }
+  .sum .lst { list-style: none; margin: 0 0 14px; padding: 0; }
+  .sum .lst li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; cursor: inherit; font-size: 14px; }
+  .sum .lst li:hover, .sum .lst li.on { background: var(--primary-soft); }
+  .sum .lst .n { width: 22px; height: 22px; border-radius: 11px; background: var(--primary-soft); color: var(--primary); font: 700 11px system-ui, sans-serif; display: grid; place-items: center; flex: 0 0 auto; }
+  .sum .lst .grow { flex: 1; }
+  .sum .lst .v { font-weight: 600; }
+  .sum .grp { margin-top: 4px; }
+
   .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.32); display: flex; align-items: flex-end; z-index: 30; }
   .sheet { background: var(--surface); width: 100%; border-radius: 22px 22px 0 0; padding: 16px 16px 18px; max-height: 88%; overflow: auto; }
   .sheet h3 { margin: 0 0 10px; font-size: 18px; }
@@ -157,6 +194,7 @@
 </style>
 </head>
 <body>
+<div class="devbar"><button data-dev="phone" class="on">📱 Celular</button><button data-dev="tablet">📲 Tablet</button></div>
 <main>
   <div class="phone">
     <div class="screen" id="screen">
@@ -191,6 +229,9 @@
         <div class="controls" id="controls"></div>
         <div class="tip" id="tip" hidden></div>
       </div>
+      <!-- só no tablet: barra lateral (modos e itens) e painel fixo (resumo, ou o que estiver selecionado) -->
+      <div class="rail" id="rail"></div>
+      <div class="panel" id="panel"><div id="summary" class="sum"></div></div>
       <div class="toast" id="toast"></div>
     </div>
   </div>
@@ -627,6 +668,7 @@ let detailsOpen = false;
 try { detailsOpen = localStorage.getItem('esq-details') === '1'; } catch { }
 function pillarSheet(id) {
   const pl = draft.pillars.find(x => x.id === id); if (!pl) return;
+  if (isTablet) document.querySelectorAll('.scrim').forEach(s => s.remove());
   selected = { pillar: id }; render();
   const T = typeOf(pl), n = draft.pillars.filter(x => typeOf(x) === T).indexOf(pl) + 1, nm = T.name.toLowerCase();
   const basic = T.point
@@ -638,7 +680,7 @@ function pillarSheet(id) {
     : `<div class="row"><span>${f.label}</span><button class="val" data-n="${f.key}">${fmtCm(pl[f.key] ?? f.num)} ✎</button></div>`).join('');
   sheet(`<h3>${T.icon} ${T.name}${n > 1 || draft.pillars.filter(x => typeOf(x) === T).length > 1 ? ' ' + n : ''}</h3>
     ${basic}
-    ${det ? `<details class="more"${detailsOpen ? ' open' : ''}><summary>Mais detalhes</summary>${det}</details>` : ''}
+    ${det ? `<details class="more"${detailsOpen || isTablet ? ' open' : ''}><summary>Mais detalhes</summary>${det}</details>` : ''}
     <p class="small">${pl.wall !== null ? (T.point ? 'Na parede ' : 'Encostado na parede ') + (pl.wall + 1) + '. ' : ''}Arraste no desenho para mudar de lugar.</p>
     <div class="actions"><button class="btn danger" data-a="rm">Remover</button><button class="btn pri" data-a="x">Pronto</button></div>`, (sh, close) => {
     sh.querySelector('details')?.addEventListener('toggle', e => { detailsOpen = e.target.open; try { localStorage.setItem('esq-details', detailsOpen ? '1' : '0'); } catch { } });
@@ -918,7 +960,7 @@ function fitView(force) {
   // sem parede ainda: só o botão põe a vista no começo (o primeiro canto tocado não pode pular de lugar)
   if (!draft.segs.length) { if (force && !draft.anchored) view = { sc: MAX_SC, tx: 80 - draft.start.x * MAX_SC, ty: 90 - draft.start.y * MAX_SC }; return; }
   // margem só para as medidas por fora das paredes (e os botões flutuantes à direita); o cômodo ocupa a tela
-  const xs = v.map(p => p.x), ys = v.map(p => p.y), m = 48, mr = 88, cv = covered(), mt = cv.top + 22, mb = cv.bottom + 26;
+  const xs = v.map(p => p.x), ys = v.map(p => p.y), m = 48, mr = isTablet ? 48 : 88, cv = covered(), mt = cv.top + 22, mb = cv.bottom + 26;
   const bw = Math.max(1, Math.max(...xs) - Math.min(...xs)), bh = Math.max(1, Math.max(...ys) - Math.min(...ys));
   // desenhando (sala aberta) não aproxima além da escala de desenhar, para o traço não mudar de tamanho a cada parede
   const sc = Math.max(0.01, Math.min(draft.closed ? FIT_MAX_SC : MAX_SC, (W - m - mr) / bw, (H - mt - mb) / bh));
@@ -926,7 +968,7 @@ function fitView(force) {
   view = { sc, tx: m + (W - m - mr) / 2 - cx * sc, ty: mt + (H - mt - mb) / 2 - cy * sc };
 }
 // faixas do desenho cobertas pelos botões flutuantes (em cima: desfazer/refazer; embaixo: controles do modo)
-function covered() { const c = $('#controls'); return { top: 56, bottom: (c ? c.offsetHeight : 0) + 6 }; }
+function covered() { if (isTablet) return { top: 40, bottom: 10 }; const c = $('#controls'); return { top: 56, bottom: (c ? c.offsetHeight : 0) + 6 }; }
 // seguindo, o render já enquadra; com a vista arrastada pelo usuário, ela fica parada onde ele deixou
 function ensureVisible() { }
 
@@ -1088,6 +1130,7 @@ function render() {
   }
   $('#scene').innerHTML = h;
   renderControls();
+  renderSummary();
 }
 
 function renderControls() {
@@ -1163,7 +1206,7 @@ function sheet(html, mount) {
   s.addEventListener('pointerdown', e => { if (e.target === s) close(); });
   $('#screen').appendChild(s); mount && mount(s, close); return s;
 }
-function select(i, op) { selected = { i, op }; render(); }
+function select(i, op) { if (isTablet) document.querySelectorAll('.scrim').forEach(s => s.remove()); selected = { i, op }; render(); }
 function keypad(title, mm, unitNote, done, unit = 'cm') {
   const scale = unit === 'cm' ? 10 : 1;
   let txt = String(Math.round(mm / scale * 10) / 10).replace('.', ','), fresh = true;
@@ -1429,6 +1472,7 @@ function tapAt(p) {
   }
   for (let i = 0; i < hits.labels.length; i++) if (dist(p, hits.labels[i]) < 26) return wallSheetFor(i);
   for (let i = 0; i < hits.walls.length; i++) if (distToPoly(p, hits.walls[i]) < 18) return wallSheetFor(i);
+  if (isTablet && selected) clearPanel();
 }
 
 const cv = $('#cv');
@@ -1625,6 +1669,55 @@ $('#cancelBtn').onclick = () => {
   });
 };
 $('#dbg').onchange = e => { showDebug = e.target.checked; render(); };
+// ---------- celular × tablet ----------
+// Os mesmos elementos mudam de lugar: no tablet os modos e os itens vão para a barra lateral, desfazer/refazer e
+// enquadrar para o topo, e os controles do modo para o pé do painel fixo. O desenho e o estado são os mesmos.
+let isTablet = false;
+const homes = {};
+function moveTo(el, parent, before) { if (!homes[el.id || el.className]) homes[el.id || el.className] = { parent: el.parentNode, next: el.nextSibling }; parent.insertBefore(el, before || null); }
+function moveHome(el) { const h = homes[el.id || el.className]; if (h) h.parent.insertBefore(el, h.next); }
+function setDevice(dev) {
+  isTablet = dev === 'tablet';
+  document.querySelectorAll('.devbar button').forEach(b => b.classList.toggle('on', b.dataset.dev === dev));
+  $('.phone').classList.toggle('tablet', isTablet);
+  document.querySelectorAll('.scrim').forEach(s => s.remove()); selected = null;
+  const modes = $('.modes'), fabs = $('#fabs'), undo = $('.fabs.left'), fit = $('#fitBtn'), ctl = $('#controls');
+  if (isTablet) {
+    moveTo(modes, $('#rail'));
+    if (!$('#rail .sep')) { const s = document.createElement('div'); s.className = 'sep'; $('#rail').appendChild(s); }
+    moveTo(fabs, $('#rail'));
+    moveTo(undo, $('.appbar'), $('#doneBtn')); moveTo(fit, $('.appbar'), $('#doneBtn'));
+    moveTo(ctl, $('#panel'));
+  } else {
+    [modes, fabs, undo, fit, ctl].forEach(moveHome);
+  }
+  renderControls.last = null; follow = true;
+  requestAnimationFrame(() => {
+    $('#screen').style.setProperty('--paneltop', $('#panel').offsetTop + 'px');
+    fitView(true); render();
+  });
+}
+document.querySelectorAll('.devbar button').forEach(b => b.addEventListener('click', () => setDevice(b.dataset.dev)));
+// tablet: abrir algo novo troca o que está no painel (não empilha); tocar no vazio volta ao resumo
+function clearPanel() { document.querySelectorAll('.scrim').forEach(s => s.remove()); selected = null; render(); }
+// resumo do cômodo no painel quando nada está selecionado; tocar numa linha seleciona aquilo
+function renderSummary() {
+  if (!isTablet) return;
+  const vs = verts(), segs = draft.segs, items = draft.pillars || [];
+  const ops = segs.flatMap((s, i) => s.ops.map(o => ({ ...o, i })));
+  const area = draft.closed ? (Math.abs(areaOf()) / 1e6).toFixed(2).replace('.', ',') + ' m²' : null;
+  $('#summary').innerHTML = `<h3>Cômodo</h3>
+    <p class="stat">${!segs.length ? 'Ainda sem paredes. Comece pelo modo à esquerda.' : draft.closed ? `Fechado · ${segs.length} paredes · ${area}` : `Aberto · ${segs.length} parede${segs.length > 1 ? 's' : ''} até agora`}</p>
+    ${segs.length ? `<p class="grp">Paredes</p><ul class="lst">${segs.map((s, i) => `<li data-w="${i}" class="${selected && selected.i === i && !selected.op ? 'on' : ''}"><span class="n">${i + 1}</span><span class="grow">${bulgeOf(s) ? 'Curva' : isAxis(s.dir) ? 'Reta' : 'Inclinada'}${s.ops.length ? ' · ' + s.ops.map(o => KIND[o.kind].name.toLowerCase()).join(', ') : ''}</span><span class="v">${fmtM(s.len)} m</span></li>`).join('')}</ul>` : ''}
+    ${ops.length ? `<p class="grp">Aberturas</p><ul class="lst">${ops.map(o => `<li data-o="${o.id}" data-oi="${o.i}"><span class="n" style="background:${KIND[o.kind].color};color:#fff">${KIND[o.kind].name[0]}</span><span class="grow">${KIND[o.kind].name} · parede ${o.i + 1}</span><span class="v">${fmtCm(o.width)}</span></li>`).join('')}</ul>` : ''}
+    ${items.length ? `<p class="grp">Itens</p><ul class="lst">${items.map(p => `<li data-p="${p.id}"><span class="n">${typeOf(p).icon}</span><span class="grow">${typeOf(p).name}</span><span class="v">${typeOf(p).point ? fmtCm(p.h) + ' do chão' : fmtCm(p.w) + ' × ' + fmtCm(p.d)}</span></li>`).join('')}</ul>` : ''}`;
+}
+$('#summary').addEventListener('click', e => {
+  const li = e.target.closest('li'); if (!li) return;
+  if (li.dataset.w) wallSheetFor(+li.dataset.w);
+  else if (li.dataset.o) opSheet(+li.dataset.oi, li.dataset.o);
+  else if (li.dataset.p) pillarSheet(li.dataset.p);
+});
 window.addEventListener('resize', render);
 
 render(); fitView(true); render(); showTip();
